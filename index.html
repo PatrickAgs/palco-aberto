@@ -55,7 +55,8 @@ p{margin:0}
 
 /* ---------- início ---------- */
 .home{max-width:1440px;margin:0 auto;padding-block:16px 40px;padding-left:var(--gutter-l);padding-right:var(--gutter-r);display:flex;flex-direction:column;gap:64px}
-.topnav{display:flex;flex-wrap:wrap;gap:8px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;padding-block:4px}
+.topnav{display:flex;flex-wrap:wrap;gap:8px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;padding-block:8px;background:var(--ink)}
+@media (max-width:560px){.topnav .pill{min-height:36px;padding:0 12px;font-size:11px;letter-spacing:.04em}.topnav{gap:6px}}
 .hero{display:flex;flex-direction:column;gap:14px}
 .wordmark{margin:0;font:400 clamp(58px,15.2vw,214px)/.84 var(--sans);letter-spacing:-.05em;color:var(--yellow);text-transform:uppercase;overflow-wrap:anywhere}
 .wordmark .ast{display:inline-block;color:var(--yellow);font-size:.62em;vertical-align:.5em;margin-left:.04em;animation:spin 14s linear infinite}
@@ -88,13 +89,44 @@ h2 em{font-style:normal;box-shadow:inset 0 -.16em 0 var(--yellow)}
 .eq i{display:block;height:3px;background:var(--yellow);transform-origin:left;animation:eq 2.6s ease-in-out infinite alternate}
 @keyframes eq{from{transform:scaleX(var(--a))}to{transform:scaleX(var(--b))}}
 
+/* ---------- palco de abertura ---------- */
+.stagehero{position:relative;min-height:clamp(380px,50vw,640px);display:flex;flex-direction:column;justify-content:flex-start;gap:14px;padding-top:clamp(28px,5vw,64px);overflow:hidden;border:1px solid var(--charcoal)}
+.stagehero canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
+.stagehero > *:not(canvas){position:relative;z-index:1;padding-inline:clamp(16px,3vw,32px)}
+.live{display:inline-flex;align-items:center;gap:8px;font:400 12px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--black);background:var(--yellow);border-radius:900px;padding:8px 14px;align-self:flex-start;margin-left:clamp(16px,3vw,32px)}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--black);animation:blink 1s steps(2,start) infinite}
+@keyframes blink{to{visibility:hidden}}
+.wordmark .lt{display:inline-block;color:var(--yellow);animation:hop .535s ease-in-out infinite alternate;animation-delay:calc(var(--i) * -.09s)}
+.wordmark .sp{display:inline-block;width:.22em}
+@keyframes hop{from{transform:translateY(0)}to{transform:translateY(-.035em)}}
+.marquee{overflow:hidden;background:var(--yellow);color:var(--black);border-block:1px solid var(--black);margin-inline:calc(-1 * var(--gutter-l)) calc(-1 * var(--gutter-r))}
+.marquee .track{display:flex;width:max-content;animation:marq 38s linear infinite}
+.marquee span{font:400 14px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:14px 18px;white-space:nowrap}
+.marquee b{font-weight:400}
+@keyframes marq{to{transform:translateX(-50%)}}
+.ytpanel{border:1px solid var(--yellow);padding:clamp(18px,3vw,32px);display:flex;flex-direction:column;gap:18px}
+.ytpanel .ytform input{min-height:58px;font-size:18px;padding:0 24px}
+.ytpanel .ytform .pill{min-height:58px;padding:0 30px;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:400 13px/1 var(--sans);padding:10px 16px;border-radius:900px;border:1px solid var(--charcoal);background:transparent;color:var(--bone);cursor:pointer}
+.chip:hover,.chip:focus-visible{border-color:var(--yellow);color:var(--yellow);outline:none}
+.fame{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));border-top:1px solid var(--charcoal);border-left:1px solid var(--charcoal)}
+.fame article{border-right:1px solid var(--charcoal);border-bottom:1px solid var(--charcoal);padding:22px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.fame .pos{font:400 12px/1 var(--mono);color:var(--mute);text-transform:uppercase;letter-spacing:.08em}
+.fame b{font:400 clamp(56px,8vw,96px)/.85 var(--sans);letter-spacing:-.05em;color:var(--yellow);font-variant-numeric:tabular-nums}
+.fame .nm{font-size:22px;overflow-wrap:anywhere}
+.fame .sg{color:var(--sand);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fame article:first-child b{color:var(--black);background:var(--yellow);align-self:flex-start;padding:4px 10px 0}
+@media (prefers-reduced-motion:reduce){.marquee .track,.wordmark .lt{animation:none}}
+
 /* ---------- modo YouTube ---------- */
 .yt-sec{display:flex;flex-direction:column;gap:20px}
 .ytform{display:flex;gap:8px;flex-wrap:wrap;max-width:760px}
 .ytform input{flex:1 1 260px;min-width:0}
 .ythint{color:var(--sand);line-height:1.4;max-width:70ch;font-size:14px}
 .ythint a{color:var(--yellow)}
-.ytres{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:16px}
+.ytres{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:16px}
+@media (min-width:700px){.ytres{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}}
 .ytcard{display:flex;flex-direction:column;gap:8px;text-align:left;background:none;border:0;padding:0;cursor:pointer;min-width:0;color:var(--bone)}
 .ytcard img{width:100%;aspect-ratio:16/9;object-fit:cover;border:1px solid var(--charcoal);display:block;background:var(--charcoal)}
 .ytcard:hover img,.ytcard:focus-visible img{border-color:var(--yellow)}
@@ -252,23 +284,36 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
   </nav>
 
   <header class="hero">
-    <h1 class="wordmark grain">Palco Aberto<span class="ast" aria-hidden="true">✱</span></h1>
+    <div class="stagehero">
+      <canvas id="heroCv" aria-hidden="true"></canvas>
+      <span class="live"><i></i>Ao vivo</span>
+      <h1 class="wordmark" id="wordmark" aria-label="Palco Aberto">Palco Aberto<span class="ast" aria-hidden="true">✱</span></h1>
+    </div>
+    <div class="marquee" aria-hidden="true"><div class="track" id="marquee"></div></div>
     <div class="cities" aria-label="Tecnologias">
       <span>Demucs · voz separada</span><span>Whisper · letra palavra a palavra</span><span>CREPE · melodia</span><span>YIN · sua voz ao vivo</span>
     </div>
   </header>
 
   <section class="yt-sec" aria-labelledby="t-yt">
+    <div class="ytpanel">
     <div class="badge"><span>Modo YouTube</span><span>Sem baixar nada</span></div>
-    <h2 id="t-yt">Cole o link de um <em>karaokê do YouTube</em> e cante valendo nota.</h2>
+    <h2 id="t-yt">Digite a música e <em>suba no palco</em>.</h2>
     <form class="ytform" id="ytForm" autocomplete="off">
-      <input type="text" id="ytQuery" placeholder="Link do vídeo ou nome da música" enterkeyhint="go" aria-label="Link do vídeo ou nome da música">
-      <button class="pill fill" type="submit">Cantar</button>
+      <input type="search" id="ytQuery" placeholder="Nome da música ou do cantor" enterkeyhint="search" aria-label="Nome da música ou do cantor">
+      <button class="pill fill" type="submit">Buscar karaokê</button>
     </form>
-    <p class="ythint" id="ytHint">Dica: procure por “nome da música karaokê” no YouTube, copie o link do vídeo e cole aqui. Use fone de ouvido para o microfone ouvir só você.</p>
+    <div class="chips" id="chips" aria-label="Sugestões"></div>
+    <p class="ythint" id="ytHint">Também dá para colar o link de um vídeo do YouTube. Use fone de ouvido para o microfone ouvir só você.</p>
+    </div>
     <div class="ytres" id="ytResults"></div>
     <div class="label" id="ytRecentLabel" hidden style="align-items:center"><span>Cantadas recentemente</span><button class="pill ghost sm" type="button" id="ytClear">Limpar</button></div>
     <div class="ytres" id="ytRecent"></div>
+  </section>
+
+  <section class="yt-sec" aria-labelledby="t-fame">
+    <div class="lib-head"><h2 id="t-fame">Hall da Fama</h2><button class="pill sm" type="button" id="btnRank3">Ranking completo</button></div>
+    <div class="fame" id="fame"></div>
   </section>
 
   <section class="split" aria-labelledby="t-lib">
@@ -359,7 +404,7 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
       <p class="sub" style="font-size:13px;line-height:1.4">Com fone Bluetooth ou caixa de som, a sua voz chega atrasada. Se as notas acendem depois do que você canta, aumente aqui (fone Bluetooth costuma ficar entre 150 e 250 ms).</p>
     </div>
     <div class="field">
-      <label class="label" for="ytKey">Chave da API do YouTube (opcional, para buscar pelo nome)</label>
+      <label class="label" for="ytKey">Chave própria da API do YouTube (opcional, o site já tem uma)</label>
       <input type="text" id="ytKey" autocomplete="off" spellcheck="false" placeholder="AIza…">
       <p class="sub" style="font-size:13px;line-height:1.4">Grátis: em console.cloud.google.com crie um projeto, ative a “YouTube Data API v3” e gere uma chave em Credenciais. Ela fica guardada só neste aparelho.</p>
     </div>
@@ -1024,7 +1069,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pause
 function quitToHome() {
   G.running = false; G.ended = true; disposeTracks(); wakeLock(false); Mic.stop(); Tab.stop();
   $('#stage').hidden = true; $('#results').hidden = true; $('#home').hidden = false; $('#eq').hidden = false;
-  renderLibrary(); renderRecent(); window.scrollTo(0, 0);
+  renderLibrary(); renderRecent(); renderFame(); window.scrollTo(0, 0);
 }
 
 let wl = null;
@@ -1389,7 +1434,7 @@ class YtSource {
     $('#ytBox').innerHTML = '<div id="ytPlayer"></div><div class="yttap" id="ytTap" hidden>Toque no vídeo para começar</div>';
     this._ct = -1; this._pf = 0; this.state = -1; this.ready = false;
     this.p = new YT.Player('ytPlayer', {
-      videoId: id,
+      videoId: id, host: 'https://www.youtube-nocookie.com',
       playerVars: { playsinline: 1, rel: 0, modestbranding: 1, autoplay: 1, fs: 0, iv_load_policy: 3, disablekb: 1 },
       events: {
         onReady: e => {
@@ -1426,6 +1471,8 @@ function parseYtId(q) {
   if (m) return m[1];
   return /^[A-Za-z0-9_-]{11}$/.test(q) && /[0-9_-]|[A-Z].*[a-z]/.test(q) ? q : null;
 }
+const YT_KEY = 'AIzaSyA69OAqSUNKfukg3qeUQX2m81XG3vej3KA'; // chave travada para patrickags.github.io
+const ytKey = () => settings.ytKey || YT_KEY;
 const ytThumb = id => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
 function ytCard(v) {
   const best = store.get('rank:yt:' + v.id, [])[0];
@@ -1445,20 +1492,20 @@ $('#ytForm').addEventListener('submit', async e => {
   if (id) { openYtSetup({ id, title: '' }); return; }
   const out = $('#ytResults');
   const ytUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q + ' karaokê');
-  if (!settings.ytKey) {
-    out.innerHTML = '';
-    $('#ytHint').innerHTML = `Para buscar pelo nome aqui dentro, coloque uma chave da API em Ajustes. Sem ela: <a href="${ytUrl}" target="_blank" rel="noopener">abra “${esc(q)} karaokê” no YouTube</a>, copie o link do vídeo e cole aqui.`;
-    return;
-  }
   $('#ytHint').textContent = 'Buscando…';
   try {
-    const url = 'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=12&q=' + encodeURIComponent(q + ' karaokê') + '&key=' + encodeURIComponent(settings.ytKey);
-    const r = await fetch(url); const j = await r.json();
-    if (!r.ok) throw new Error(r.status === 403 || r.status === 400 ? 'A chave da API foi recusada ou a cota do dia acabou. Confira em Ajustes.' : 'A busca falhou.');
-    const items = (j.items || []).filter(it => it.id && it.id.videoId).map(it => ({ id: it.id.videoId, title: decodeHtml(it.snippet.title), channel: decodeHtml(it.snippet.channelTitle) }));
+    const ck = 'ytq:' + q.toLowerCase(); let items = store.get(ck, null);
+    if (!items) {
+      const url = 'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=12&regionCode=BR&q=' + encodeURIComponent(q + ' karaokê') + '&key=' + encodeURIComponent(ytKey());
+      const r = await fetch(url); const j = await r.json();
+      if (!r.ok) throw new Error(r.status === 403 ? 'A busca do YouTube atingiu o limite de hoje (ou a chave foi recusada). Cole o link do vídeo enquanto isso: ' : 'A busca falhou. ');
+      items = (j.items || []).filter(it => it.id && it.id.videoId).map(it => ({ id: it.id.videoId, title: decodeHtml(it.snippet.title), channel: decodeHtml(it.snippet.channelTitle) }));
+      store.set(ck, items);
+    }
     out.innerHTML = items.map(ytCard).join('');
     $('#ytHint').innerHTML = items.length ? 'Escolha um vídeo. Prefira os que têm “karaokê” ou “instrumental” no título.' : `Nada encontrado. <a href="${ytUrl}" target="_blank" rel="noopener">Tente direto no YouTube</a>.`;
-  } catch (err) { $('#ytHint').textContent = err.message || 'A busca falhou. Tente colar o link do vídeo.'; }
+    out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) { $('#ytHint').innerHTML = esc(err.message || 'A busca falhou. ') + `<a href="${ytUrl}" target="_blank" rel="noopener">abrir no YouTube</a> e colar o link aqui.`; }
 });
 ['#ytResults', '#ytRecent'].forEach(sel => $(sel).addEventListener('click', e => { const c = e.target.closest('[data-yt]'); if (c) openYtSetup({ id: c.dataset.yt, title: c.dataset.title }); }));
 
@@ -1858,6 +1905,76 @@ $('#rkClear').addEventListener('click', e => {
   b.dataset.armed = '1'; b.textContent = 'Toque de novo para zerar'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Zerar ranking'; }, 3500);
 });
 $('#whoName').addEventListener('input', e => { settings.name = e.target.value.trim() || 'Você'; saveSettings(); });
+
+
+/* ---------------- Página inicial viva ---------------- */
+(function wordmark() {
+  const h = $('#wordmark'); const ast = h.querySelector('.ast').outerHTML; let i = 0;
+  h.innerHTML = [...'Palco Aberto'].map(ch => ch === ' ' ? '<br>' : `<span class="lt" style="--i:${i++}">${ch}</span>`).join('') + ast;
+})();
+(function marquee() {
+  const items = ['Ao vivo', '@bia.buzios QUE VOZ', 'Solta a voz', '@lucas_rj bis! bis!', 'Nota em tempo real', '@mari.arraial arrepiei', 'A plateia reage', '@caio.mp3 chama pro The Voice', 'Ranking da galera', '@nanda segura essa nota'];
+  const one = items.map(t => `<span>${esc(t)}</span><span aria-hidden="true">✱</span>`).join('');
+  $('#marquee').innerHTML = one + one;
+})();
+(function chips() {
+  const sug = ['Evidências', 'Baby Justin Bieber', 'Shallow', 'Ai Se Eu Te Pego', 'Garota de Ipanema', 'Bohemian Rhapsody', 'Infiel', 'Dancing Queen', 'Asa Branca', 'Perfect Ed Sheeran'];
+  $('#chips').innerHTML = sug.map(t => `<button class="chip" type="button">${esc(t)}</button>`).join('');
+  $('#chips').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; $('#ytQuery').value = c.textContent; $('#ytForm').requestSubmit(); });
+})();
+function renderFame() {
+  const h = store.get('history', []), top = [...h].sort((a, b) => b.nota - a.nota || a.at - b.at).slice(0, 3);
+  $('#fame').innerHTML = top.length ? top.map((r, i) => `<article><span class="pos">${i + 1}º lugar</span><b>${r.nota}</b><span class="nm">${esc(r.name)}</span><span class="sg">${esc(r.song)}${r.artist ? ' · ' + esc(r.artist) : ''}</span></article>`).join('')
+    : `<article><span class="pos">1º lugar</span><b>—</b><span class="nm">Está vago</span><span class="sg">Cante a primeira música e entre aqui.</span></article>`;
+}
+$('#btnRank3').addEventListener('click', () => openRanking());
+renderFame();
+const Hero = {
+  start() {
+    this.cv = $('#heroCv'); this.build();
+    window.addEventListener('resize', () => this.build());
+    const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const loop = ms => { if (!still) requestAnimationFrame(loop); if (!$('#home').hidden) this.draw(ms / 1000); };
+    requestAnimationFrame(loop);
+  },
+  build() {
+    const r = this.cv.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1);
+    this.W = r.width; this.H = r.height; this.cv.width = r.width * d; this.cv.height = r.height * d;
+    this.x = this.cv.getContext('2d'); this.x.setTransform(d, 0, 0, d, 0, 0); this.people = [];
+    [1, 0].forEach(row => { const gap = row ? 26 : 36, n = Math.ceil(this.W / gap) + 2; for (let i = 0; i < n; i++) this.people.push({ row, x: (i - 0.5 + Math.random() * 0.7) * gap, s: (row ? 0.75 : 1) * (0.85 + Math.random() * 0.3), ph: Math.random() * 6.28, arm: Math.random(), light: Math.random() < 0.5 }); });
+    const g = document.createElement('canvas'); g.width = g.height = 96; const gx = g.getContext('2d');
+    for (let i = 0; i < 1100; i++) { gx.fillStyle = `rgba(0,0,0,${(Math.random() * 0.35).toFixed(2)})`; gx.fillRect(Math.random() * 96, Math.random() * 96, 1.2, 1.2); }
+    this.grain = this.x.createPattern(g, 'repeat');
+  },
+  draw(t) {
+    const x = this.x, W = this.W, H = this.H; if (!x || !W) return;
+    const Y = COL.yellow || '#f0e226', beat = (t * 112 / 60) % 1, pulse = Math.pow(1 - beat, 3), e = 0.55 + 0.45 * Math.sin(t * 0.35);
+    x.fillStyle = COL.ink || '#19181a'; x.fillRect(0, 0, W, H);
+    x.save(); x.fillStyle = Y;
+    for (let k = 0; k < 5; k++) {
+      const sx = W * (0.08 + k * 0.21), ang = Math.sin(t * 0.55 + k * 1.7) * 0.6, len = H * 1.4, sp = 0.11;
+      x.globalAlpha = 0.06 + pulse * 0.07; x.beginPath(); x.moveTo(sx, -6);
+      x.lineTo(sx + Math.sin(ang - sp) * len, Math.cos(ang - sp) * len); x.lineTo(sx + Math.sin(ang + sp) * len, Math.cos(ang + sp) * len); x.closePath(); x.fill();
+    }
+    x.restore();
+    const band = H * (0.74 - pulse * 0.02), cs = Math.min(1.4, H / 380);
+    x.fillStyle = Y; x.fillRect(0, band, W, H); if (this.grain) { x.fillStyle = this.grain; x.fillRect(0, band, W, H); }
+    for (const p of this.people) {
+      const s = p.s * cs, base = p.row ? H - 30 * cs : H + 8, bob = pulse * (0.5 + 0.5 * Math.sin(p.ph * 3)) * (3 + e * 9) * s;
+      const hx = p.x + Math.sin(t * 1.2 + p.ph) * 2, hy = base - 48 * s - bob;
+      x.fillStyle = '#000'; x.strokeStyle = '#000'; x.lineCap = 'round';
+      if (p.arm < (e - 0.4) * 1.6) {
+        x.lineWidth = 5 * s; const sw = Math.sin(t * 2 + p.ph) * 0.35;
+        [-1, 1].forEach(side => { const sx = hx + side * 11 * s, sy = hy + 18 * s, a = -Math.PI / 2 + side * 0.35 + sw, ex = sx + Math.cos(a) * 30 * s, ey = sy + Math.sin(a) * 30 * s;
+          x.beginPath(); x.moveTo(sx, sy); x.lineTo(ex, ey); x.stroke();
+          if (p.light && e > 0.75 && side === 1) { x.fillStyle = COL.bone || '#f5f4f0'; x.fillRect(ex - 3 * s, ey - 9 * s, 6 * s, 9 * s); x.fillStyle = '#000'; } });
+      }
+      x.beginPath(); x.ellipse(hx, hy + 30 * s, 17 * s, 16 * s, 0, Math.PI, 0); x.lineTo(hx + 17 * s, base + 60); x.lineTo(hx - 17 * s, base + 60); x.closePath(); x.fill();
+      x.beginPath(); x.arc(hx, hy, 9.5 * s, 0, Math.PI * 2); x.fill();
+    }
+  }
+};
+Hero.start();
 
 /* ---------------- Equalizador decorativo ---------------- */
 (function eq() {
