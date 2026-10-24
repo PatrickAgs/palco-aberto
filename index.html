@@ -311,8 +311,11 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
  <div class="monbox">
       <label class="check"><input type="checkbox" class="optMon"> Ouvir minha voz junto com a música</label>
       <div class="field"><label class="label">Volume da voz <output class="monVolOut">80%</output></label><input type="range" class="monVol" min="0" max="100" step="5" aria-label="Volume da voz"></div>
-      <div class="field"><label class="label">Eco de karaokê <output class="monFxOut">35%</output></label><input type="range" class="monFx" min="0" max="100" step="5" aria-label="Eco de karaokê"></div>
+      <div class="field"><label class="label">Eco de karaokê <output class="monFxOut">20%</output></label><input type="range" class="monFx" min="0" max="100" step="5" aria-label="Eco de karaokê"></div>
+      <label class="check"><input type="checkbox" class="optNs"> Supressor de ruído com IA (tira barulho de fundo, ventilador, teclado)</label>
+      <p class="micmsg monLat" style="grid-column:auto"></p>
     </div>
+ <label class="check" id="fTab"><input type="checkbox" id="optTab"> <span>Comparar com o tom da música <span class="sub" style="display:block;font-size:13px;line-height:1.35;margin-top:2px">Só no computador. O navegador vai pedir para compartilhar esta aba: escolha <b style="font-weight:400;color:var(--bone)">esta aba</b> e deixe <b style="font-weight:400;color:var(--bone)">“Compartilhar áudio da aba”</b> ligado.</span></span></label>
     <p class="sub" id="fYtTip" style="line-height:1.4">Use fone de ouvido. Se o som sair pela caixa, o microfone escuta a música junto e a nota fica errada. A nota vem da sua afinação, da firmeza da voz e de quanto você cantou.</p>
     <label class="check" id="fAuto"><input type="checkbox" id="autoSing"> Modo show: a voz original canta sozinha e a plateia reage</label>
     <div class="actions">
@@ -403,7 +406,9 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
     <div class="monbox">
       <label class="check"><input type="checkbox" class="optMon"> Ouvir minha voz junto com a música</label>
       <div class="field"><label class="label">Volume da voz <output class="monVolOut">80%</output></label><input type="range" class="monVol" min="0" max="100" step="5" aria-label="Volume da voz"></div>
-      <div class="field"><label class="label">Eco de karaokê <output class="monFxOut">35%</output></label><input type="range" class="monFx" min="0" max="100" step="5" aria-label="Eco de karaokê"></div>
+      <div class="field"><label class="label">Eco de karaokê <output class="monFxOut">20%</output></label><input type="range" class="monFx" min="0" max="100" step="5" aria-label="Eco de karaokê"></div>
+      <label class="check"><input type="checkbox" class="optNs"> Supressor de ruído com IA (tira barulho de fundo, ventilador, teclado)</label>
+      <p class="micmsg monLat" style="grid-column:auto"></p>
     </div>
     <div class="actions">
       <button class="pill fill" type="button" id="btnResume">Continuar</button>
@@ -467,7 +472,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('palco:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('palco:' + k, JSON.stringify(v)); } catch (e) {} }
 };
-const settings = Object.assign({ name: 'Você', latency: 0, sfx: true, feed: true, diff: 'normal', guide: 30, autoSing: false, ytKey: '', monitor: false, monVol: 80, monFx: 35 }, store.get('settings', {}));
+const settings = Object.assign({ name: 'Você', latency: 0, sfx: true, feed: true, diff: 'normal', guide: 30, autoSing: false, ytKey: '', monitor: false, monVol: 80, monFx: 20, tabCompare: true, denoise: true }, store.get('settings', {}));
 const saveSettings = () => store.set('settings', settings);
 const TOL = { facil: 1.6, normal: 1.0, dificil: 0.6 };
 
@@ -478,7 +483,7 @@ function loading(msg) { const l = $('#loading'); if (msg) { l.textContent = msg;
 /* ---------------- Áudio ---------------- */
 let AC = null;
 function ac() {
-  if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+  if (!AC) { const C = window.AudioContext || window.webkitAudioContext; try { AC = new C({ latencyHint: 0, sampleRate: 48000 }); } catch (e) { AC = new C({ latencyHint: 'interactive' }); } }
   if (AC.state === 'suspended') AC.resume();
   return AC;
 }
@@ -594,10 +599,14 @@ const Mic = {
     if (this.an && !this.external) return true;
     this.detach();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
-    try { this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: !settings.monitor, noiseSuppression: false, autoGainControl: false, latency: 0 } }); }
+    try { this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: !settings.monitor, noiseSuppression: false, autoGainControl: false, latency: 0, channelCount: 1 } }); }
     catch (e) { return false; }
-    const c = ac(); this.src = c.createMediaStreamSource(this.stream);
-    this.attach(this.src); this.external = false; this.applyMonitor(); return true;
+    const c = ac(); this.src = c.createMediaStreamSource(this.stream); this.clean = this.src;
+    if (settings.denoise) {
+      try { this.ns = await Promise.race([makeRnnoise(c), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))]); this.src.connect(this.ns); this.clean = this.ns; }
+      catch (e) { console.warn(e); this.ns = null; toast('O supressor de ruído não carregou neste navegador. Seguindo sem ele.'); }
+    }
+    this.attach(this.clean); this.external = false; this.applyMonitor(); return true;
   },
   useNode(node) { this.detach(); this.attach(node); this.external = true; this.applyMonitor(); },
   attach(node) {
@@ -607,26 +616,27 @@ const Mic = {
   },
   detach() { try { this.node && this.hp && this.node.disconnect(this.hp); } catch (e) {} this.an = null; this.hp = null; this.node = null; },
   applyMonitor() {
-    if (!this.src) return;
+    if (!this.clean) return;
     const c = ac();
     if (!this.mon) {
-      const len = Math.floor(c.sampleRate * 2.2), ir = c.createBuffer(2, len, c.sampleRate);
-      for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+      const len = Math.floor(c.sampleRate * 1.6), ir = c.createBuffer(2, len, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 4); }
       const conv = c.createConvolver(); conv.buffer = ir;
-      const slap = c.createDelay(1); slap.delayTime.value = 0.11; const fb = c.createGain(); fb.gain.value = 0.28;
-      const out = c.createGain(), dry = c.createGain(), wet = c.createGain(), comp = c.createDynamicsCompressor();
-      comp.threshold.value = -18; comp.ratio.value = 4;
-      this.src.connect(comp); comp.connect(dry); comp.connect(conv); comp.connect(slap); slap.connect(fb); fb.connect(slap);
-      conv.connect(wet); slap.connect(wet); dry.connect(out); wet.connect(out); out.connect(c.destination);
-      this.mon = { out, dry, wet, comp, slap, fb, conv };
+      // caminho direto, sem compressor nem eco repetido: a voz sai na hora + reverberação de sala
+      const out = c.createGain(), wet = c.createGain();
+      this.clean.connect(out); this.clean.connect(conv); conv.connect(wet); wet.connect(out); out.connect(c.destination);
+      this.mon = { out, wet, conv, from: this.clean };
     }
     const on = settings.monitor && !this.external;
     this.mon.out.gain.setTargetAtTime(on ? (settings.monVol / 100) * 1.6 : 0, c.currentTime, 0.03);
-    this.mon.wet.gain.setTargetAtTime((settings.monFx / 100) * 0.9, c.currentTime, 0.03);
-    this.mon.dry.gain.value = 1;
+    this.mon.wet.gain.setTargetAtTime((settings.monFx / 100) * 0.7, c.currentTime, 0.03);
+    showLatency();
   },
   read() { if (!this.an) return null; this.an.getFloatTimeDomainData(this.buf); return detectPitch(this.buf, ac().sampleRate); },
-  stop() { if (this.mon) { try { this.src.disconnect(this.mon.comp); this.mon.out.disconnect(); } catch (e) {} this.mon = null; } this.detach(); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); this.stream = null; this.src = null; this.external = false; }
+  stop() {
+    if (this.mon) { try { this.mon.from.disconnect(this.mon.out); this.mon.from.disconnect(this.mon.conv); this.mon.out.disconnect(); } catch (e) {} this.mon = null; }
+    if (this.ns) { try { this.src.disconnect(this.ns); this.ns.port.postMessage('destroy'); this.ns.disconnect(); } catch (e) {} this.ns = null; }
+    this.clean = null; this.detach(); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); this.stream = null; this.src = null; this.external = false; }
 };
 
 /* ---------------- Banco local (IndexedDB) ---------------- */
@@ -849,8 +859,9 @@ async function openSetup(id) {
   openSheet('#setup');
   if (rec.demo) { const d = await getDemo(); if (pending && pending.rec === rec) { pending.inst = d.inst; pending.voc = d.voc; pending.meta = d.meta; } }
   if (!pending || pending.rec !== rec) return;
+  if (!settings.autoSing) { start.textContent = 'Ligando o microfone…'; await startMicTest(); }
+  if (!pending || pending.rec !== rec) return;
   start.disabled = false; start.textContent = 'Começar';
-  if (!settings.autoSing) startMicTest();
 }
 async function startMicTest() {
   $('#micMsg').textContent = 'Ativando o microfone…';
@@ -904,7 +915,8 @@ function prepareGame(meta) {
   return { lines, notes, mode, lo: lo - 2, hi: hi + 2, center: ps.length ? ps.reduce((a, b) => a + b, 0) / ps.length : 66 };
 }
 
-function setupMode(yt) { $('#fGuide').hidden = yt; $('#fAuto').hidden = yt; $('#fYtTip').hidden = !yt; }
+function setupMode(yt) { $('#fGuide').hidden = yt; $('#fAuto').hidden = yt; $('#fYtTip').hidden = !yt; $('#fTab').hidden = !yt || !Tab.supported(); $('#optTab').checked = settings.tabCompare; }
+$('#optTab').addEventListener('change', e => { settings.tabCompare = e.target.checked; saveSettings(); });
 function startSong() {
   if (pending && pending.yt) return startYt();
   if (!pending || !pending.inst) return;
@@ -970,7 +982,7 @@ $('#guide2').addEventListener('input', e => { settings.guide = +e.target.value; 
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 
 function quitToHome() {
-  G.running = false; G.ended = true; disposeTracks(); wakeLock(false); Mic.stop();
+  G.running = false; G.ended = true; disposeTracks(); wakeLock(false); Mic.stop(); Tab.stop();
   $('#stage').hidden = true; $('#results').hidden = true; $('#home').hidden = false; $('#eq').hidden = false;
   renderLibrary(); renderRecent(); window.scrollTo(0, 0);
 }
@@ -1261,6 +1273,7 @@ function finish() {
   G.lines.forEach(l => { if (!l.judged) judgeLine(l); });
   if (G.free) { if (G.phrase) closePhrase(); G.score = freeNota(true) * 100; }
   G.running = false; disposeTracks(); wakeLock(false);
+  const keyName = Tab.key; Tab.stop();
   const nota = G.hasMic ? Math.round(clamp(G.score / 100, 0, 100)) : null;
   // ranking local
   let rank = store.get('rank:' + G.id, []); const entry = { name: G.auto ? 'Voz original' : settings.name, nota: nota ?? 0, at: Date.now() };
@@ -1275,7 +1288,7 @@ function finish() {
   $('#resStars').innerHTML = [0, 1, 2, 3, 4].map(i => `<i class="${i < stars ? 'on' : ''}">✱</i>`).join('');
   const c = G.counts, cents = G.devN ? Math.round(G.devSum / G.devN * 100) : null;
   const fs = G.free ? freeStats() : null;
-  const stats = fs ? [['Frases afinadas', c.perfect + c.great], ['Frases cantadas', G.lines.length], ['Afinação', fs.tune + '%'], ['Firmeza da voz', fs.stab + '%'], ['Tempo cantando', fmt(G.voicedTime)], ['Maior combo', G.maxCombo], ['Desvio médio', cents == null ? '—' : cents + ' ¢'], ['Plateia no auge', Math.round(G.maxHype) + '%']] : [['Perfeitos', c.perfect], ['Ótimos', c.great], ['Bons', c.good], ['Errou', c.miss], ['Maior combo', G.maxCombo], ['Desvio médio', cents == null ? '—' : cents + ' ¢'], ['Plateia no auge', Math.round(G.maxHype) + '%'], ['Linhas perfeitas', G.lines.filter(l => l.acc >= 0.8).length + ' de ' + G.lines.length]];
+  const stats = fs ? [['Frases afinadas', c.perfect + c.great], ['Frases cantadas', G.lines.length], ['Afinação', fs.tune + '%'], ['Firmeza da voz', fs.stab + '%'], ['Tempo cantando', fmt(G.voicedTime)], ...(G.keyChecked ? [['Notas no tom', Math.round(G.keyHits / G.keyChecked * 100) + '%'], ['Tom da música', keyName || '—']] : []), ['Maior combo', G.maxCombo], ['Desvio médio', cents == null ? '—' : cents + ' ¢'], ['Plateia no auge', Math.round(G.maxHype) + '%']] : [['Perfeitos', c.perfect], ['Ótimos', c.great], ['Bons', c.good], ['Errou', c.miss], ['Maior combo', G.maxCombo], ['Desvio médio', cents == null ? '—' : cents + ' ¢'], ['Plateia no auge', Math.round(G.maxHype) + '%'], ['Linhas perfeitas', G.lines.filter(l => l.acc >= 0.8).length + ' de ' + G.lines.length]];
   $('#resStats').innerHTML = stats.map(([k, v]) => `<div class="stat"><span>${k}</span><b>${v}</b></div>`).join('');
   $('#resRank').innerHTML = rank.length ? rank.map((r, i) => `<li class="${r === entry ? 'me' : ''}"><span>${i + 1}. ${esc(r.name)}</span><span>${r.nota} <small>${new Date(r.at).toLocaleDateString('pt-BR')}</small></span></li>`).join('') : '<li><span>Ainda sem notas.</span></li>';
   $('#resChartNote').textContent = G.free ? '· cada barra é uma frase cantada' : '· ¢ = centésimos de semitom';
@@ -1411,17 +1424,21 @@ function openYtSetup(v) {
   syncDiff();
   const start = $('#btnStart'); start.disabled = true; start.textContent = 'Carregando o YouTube…';
   openSheet('#setup');
-  loadYT().then(() => { if (pending && pending.yt === v) { start.disabled = false; start.textContent = 'Começar'; } })
+  Promise.all([loadYT(), startMicTest()]).then(() => { if (pending && pending.yt === v) { start.disabled = false; start.textContent = 'Começar'; } })
     .catch(err => { start.textContent = 'Sem conexão com o YouTube'; toast(err.message); });
-  startMicTest();
 }
 function rememberYt(v) {
   let r = store.get('ytRecent', []).filter(x => x.id !== v.id);
   r.unshift({ id: v.id, title: v.title || '', channel: v.channel || '' }); store.set('ytRecent', r.slice(0, 12));
 }
 const TOLC = { facil: 40, normal: 30, dificil: 20 };
-function startYt() {
+async function startYt() {
   const v = pending.yt;
+  if (settings.tabCompare && Tab.supported() && !Tab.an) {
+    const r = await Tab.start();
+    if (r === 'noaudio') toast('O áudio da aba não veio. Na janela de compartilhar, ligue “Compartilhar áudio da aba”. Seguindo sem comparar o tom.', 7000);
+    else if (!r) toast('Sem compartilhar a aba, a nota não confere o tom da música.', 5000);
+  }
   stopMicTest(); disposeTracks();
   if (Mic.external) Mic.detach();
   let played = false;
@@ -1432,10 +1449,11 @@ function startYt() {
     tolC: TOLC[settings.diff] || 30, score: 0, combo: 0, maxCombo: 0, hype: 45, maxHype: 45,
     counts: { perfect: 0, great: 0, good: 0, miss: 0 }, trail: [], lines: [], notes: [], noteIdx: 0, lastPitch: null, frame: 0,
     devSum: 0, devN: 0, lastFeedAt: performance.now(), lastT: 0, particles: [], doneAt: 0,
-    phrase: null, silence: 0, voicedTime: 0, hist: [], tuneSum: 0, stabSum: 0, phraseDur: 0, view: 64, cur: null
+    phrase: null, silence: 0, voicedTime: 0, offKey: 0, keyChecked: 0, keyHits: 0, hist: [], tuneSum: 0, stabSum: 0, phraseDur: 0, view: 64, cur: null
   });
   G.hasMic = !!Mic.an;
-  $('#modeTag').textContent = G.hasMic ? 'YouTube · nota pela sua voz' : 'Sem microfone';
+  $('#modeTag').textContent = !G.hasMic ? 'Sem microfone' : Tab.an ? 'YouTube · comparando com a música' : 'YouTube · só afinação';
+  Tab.reset();
   if (!G.hasMic) toast('Sem microfone: você canta, mas a nota fica de fora.');
   $$('.sheet').forEach(x => x.hidden = true);
   stageLayout(true);
@@ -1449,6 +1467,7 @@ function startYt() {
 
 function updateFree(t, dt) {
   G.frame++;
+  if (Tab.an && G.frame % 6 === 0) Tab.update();
   if (G.hasMic && Mic.an && G.frame % 2 === 0) { const r = Mic.read(); G.lastPitch = r && r.f > 0 && r.clarity > 0.72 ? ftom(r.f) : null; }
   const pm = G.hasMic ? G.lastPitch : null;
   if (pm != null) {
@@ -1457,10 +1476,14 @@ function updateFree(t, dt) {
     const h = G.hist.slice(-8), mean = h.reduce((a, b) => a + b, 0) / h.length;
     const sd = Math.sqrt(h.reduce((a, b) => a + (b - mean) * (b - mean), 0) / h.length);
     const held = h.length >= 5 && sd < 0.45;
-    const cents = (pm - Math.round(pm)) * 100, inTune = Math.abs(cents) <= G.tolC, ok = held && inTune;
+    const cents = (pm - Math.round(pm)) * 100, inTune = Math.abs(cents) <= G.tolC;
+    const fit = Tab.fits(((Math.round(pm) % 12) + 12) % 12);
+    const ok = held && inTune && fit !== false;
+    if (held && inTune && fit === false) G.offKey++;
+    if (held && fit !== null) { G.keyChecked++; if (fit) G.keyHits++; }
     if (!G.phrase) G.phrase = { s: t, e: t, frames: 0, held: 0, hits: 0 };
     const ph = G.phrase; ph.e = t; ph.frames++;
-    if (held) { ph.held++; if (inTune) ph.hits++; G.devSum += Math.abs(cents) / 100; G.devN++; }
+    if (held) { ph.held++; if (inTune && fit !== false) ph.hits++; G.devSum += Math.abs(cents) / 100; G.devN++; }
     G.view += (pm - G.view) * Math.min(1, dt * 1.2);
     G.trail.push({ t, m: pm, ok }); G.cur = { m: pm, cents, held, ok, at: t };
   } else {
@@ -1515,7 +1538,8 @@ function drawFree(t) {
   x.lineWidth = 1; x.font = '10px ' + mono; x.textBaseline = 'bottom';
   for (let m = lo; m <= hi; m++) {
     const yy = Math.round(y(m)) + 0.5, isC = ((m % 12) + 12) % 12 === 0;
-    x.strokeStyle = COL.charcoal; x.globalAlpha = isC ? 1 : 0.55; x.beginPath(); x.moveTo(0, yy); x.lineTo(px, yy); x.stroke(); x.globalAlpha = 1;
+    const inSc = Tab.scale && Tab.scale.has(((m % 12) + 12) % 12);
+    x.strokeStyle = inSc ? 'rgba(240,226,38,.22)' : COL.charcoal; x.globalAlpha = isC || inSc ? 1 : 0.55; x.beginPath(); x.moveTo(0, yy); x.lineTo(px, yy); x.stroke(); x.globalAlpha = 1;
     if (isC) { x.fillStyle = COL.mute; x.fillText('Dó' + (Math.floor(m / 12) - 1), 6, yy - 3); }
   }
   // rastro: trechos afinados viram barras amarelas
@@ -1543,6 +1567,7 @@ function drawFree(t) {
   if (cur) { const nx = tx + clamp(cur.cents / 50, -1, 1) * bw / 2; x.fillStyle = cur.ok ? COL.yellow : COL.bone; x.fillRect(nx - 2, by - 11, 4, 22); }
   x.font = '10px ' + mono; x.fillStyle = COL.mute;
   x.fillText(cur ? (cur.cents >= 0 ? '+' : '') + Math.round(cur.cents) + ' ¢' : 'cante', tx, by + 22);
+  if (Tab.an) { x.fillStyle = Tab.key ? COL.yellow : COL.mute; x.fillText(Tab.key ? 'Tom: ' + Tab.key : 'ouvindo o tom…', tx, 16); }
   x.textAlign = 'start'; x.textBaseline = 'alphabetic';
   drawCrowd(t); drawFx();
   const dur = G.yt ? G.yt.duration() : 0;
@@ -1555,21 +1580,103 @@ function drawFree(t) {
 }
 
 
+
+/* ---------------- Ouvir a música da aba (tom e acordes) ---------------- */
+const KEY_MAJ = [6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
+const KEY_MIN = [6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+const Tab = {
+  an: null, stream: null, key: null, scale: null,
+  supported() { return !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) && !/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent); },
+  async start() {
+    try {
+      this.stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, preferCurrentTab: true, selfBrowserSurface: 'include', systemAudio: 'include' });
+    } catch (e) { return false; }
+    const at = this.stream.getAudioTracks();
+    if (!at.length) { this.stop(); return 'noaudio'; }
+    this.stream.getVideoTracks().forEach(t => t.enabled = false);
+    at[0].addEventListener('ended', () => this.stop());
+    const c = ac(); this.src = c.createMediaStreamSource(new MediaStream(at));
+    this.an = c.createAnalyser(); this.an.fftSize = 8192; this.an.smoothingTimeConstant = 0.3;
+    this.src.connect(this.an); this.buf = new Float32Array(this.an.frequencyBinCount);
+    this.reset(); return true;
+  },
+  reset() { this.longC = new Float32Array(12); this.shortC = new Float32Array(12); this.n = 0; this.key = null; this.scale = null; },
+  update() {
+    if (!this.an) return;
+    this.an.getFloatFrequencyData(this.buf);
+    const sr = ac().sampleRate, n = this.buf.length, hz = sr / 2 / n, c = new Float32Array(12);
+    let tot = 0;
+    for (let i = Math.max(1, Math.floor(70 / hz)); i < Math.min(n - 1, 1800 / hz); i++) {
+      const db = this.buf[i]; if (db < -85 || db < this.buf[i - 1] || db < this.buf[i + 1]) continue; // só picos
+      const mag = Math.pow(10, db / 20), m = 69 + 12 * Math.log2(i * hz / 440);
+      const pc = ((Math.round(m) % 12) + 12) % 12; c[pc] += mag; tot += mag;
+    }
+    if (tot < 1e-4) return; // silêncio
+    for (let k = 0; k < 12; k++) { c[k] /= tot; this.shortC[k] = this.shortC[k] * 0.8 + c[k] * 0.2; this.longC[k] += c[k]; }
+    this.n++;
+    if (this.n >= 40 && this.n % 10 === 0) this.findKey();
+  },
+  findKey() {
+    const L = this.longC, mean = L.reduce((a, b) => a + b, 0) / 12;
+    const corr = (prof, r) => { const pm = prof.reduce((a, b) => a + b, 0) / 12; let num = 0, da = 0, db = 0; for (let k = 0; k < 12; k++) { const a = L[(k + r) % 12] - mean, b = prof[k] - pm; num += a * b; da += a * a; db += b * b; } return num / Math.sqrt(da * db || 1); };
+    let best = { r: 0, minor: false, c: -2 };
+    for (let r = 0; r < 12; r++) { const a = corr(KEY_MAJ, r), b = corr(KEY_MIN, r); if (a > best.c) best = { r, minor: false, c: a }; if (b > best.c) best = { r, minor: true, c: b }; }
+    if (best.c < 0.45) return;
+    const steps = best.minor ? [0, 2, 3, 5, 7, 8, 10, 11] : [0, 2, 4, 5, 7, 9, 11];
+    this.scale = new Set(steps.map(s => (s + best.r) % 12));
+    this.key = NOTES[best.r] + (best.minor ? ' menor' : ' maior');
+  },
+  // true = combina com a música, false = fora do tom/acorde, null = ainda não sei
+  fits(pc) {
+    if (!this.an || !this.scale) return null;
+    const inScale = this.scale.has(pc);
+    if (settings.monitor) return inScale; // com retorno ligado a voz entra na captura; vale só o tom
+    const mx = Math.max(...this.shortC) || 1, ch = this.shortC[pc] / mx;
+    return ch >= 0.35 || (inScale && ch >= 0.12);
+  },
+  stop() {
+    if (this.stream) this.stream.getTracks().forEach(t => t.stop());
+    try { this.src && this.src.disconnect(); } catch (e) {}
+    this.stream = this.src = this.an = null;
+  }
+};
+
 /* ---------------- Retorno do microfone ---------------- */
+
+let rnWasm = null;
+async function makeRnnoise(c) {
+  const base = 'https://cdn.jsdelivr.net/npm/@sapphi-red/web-noise-suppressor@0.3.5/dist/';
+  if (!c.__rn) { await c.audioWorklet.addModule(base + 'rnnoise/workletProcessor.js'); c.__rn = true; }
+  if (!rnWasm) {
+    const simd = WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0,1,5,1,96,0,1,123,3,2,1,0,10,10,1,8,0,65,0,253,15,253,98,11]));
+    rnWasm = await fetch(base + (simd ? 'rnnoise_simd.wasm' : 'rnnoise.wasm')).then(r => { if (!r.ok) throw new Error('wasm'); return r.arrayBuffer(); });
+  }
+  return new AudioWorkletNode(c, '@sapphi-red/web-noise-suppressor/rnnoise', { processorOptions: { maxChannels: 1, wasmBinary: rnWasm.slice(0) } });
+}
+function showLatency() {
+  const c = AC; if (!c) return;
+  let inLat = 0; try { const st = Mic.stream && Mic.stream.getAudioTracks()[0].getSettings(); inLat = (st && st.latency) || 0; } catch (e) {}
+  const ms = Math.round(((c.baseLatency || 0) + (c.outputLatency || 0) + inLat) * 1000) + (Mic.ns ? 10 : 0);
+  const txt = !settings.monitor ? '' : ms ? `Atraso medido no navegador: ~${ms} ms${Mic.ns ? ' (o supressor soma uns 10 ms)' : ''}. Fone Bluetooth soma mais 150 a 250 ms que o navegador não enxerga; fone com fio é o melhor.` : 'Fone com fio atrasa bem menos que Bluetooth.';
+  $$('.monLat').forEach(p => p.textContent = txt);
+}
+
 function syncMonUI() {
   $$('.optMon').forEach(i => i.checked = settings.monitor);
   $$('.monVol').forEach(i => i.value = settings.monVol); $$('.monVolOut').forEach(o => o.textContent = settings.monVol + '%');
   $$('.monFx').forEach(i => i.value = settings.monFx); $$('.monFxOut').forEach(o => o.textContent = settings.monFx + '%');
   $$('.monbox').forEach(b => b.classList.toggle('off', !settings.monitor));
+  $$('.optNs').forEach(i => i.checked = settings.denoise); showLatency();
 }
 document.addEventListener('input', e => {
   const el = e.target;
   if (el.classList.contains('optMon')) settings.monitor = el.checked;
   else if (el.classList.contains('monVol')) settings.monVol = +el.value;
   else if (el.classList.contains('monFx')) settings.monFx = +el.value;
+  else if (el.classList.contains('optNs')) settings.denoise = el.checked;
   else return;
   saveSettings(); syncMonUI(); Mic.applyMonitor();
-  if (el.classList.contains('optMon') && Mic.stream && !Mic.external) { Mic.stop(); Mic.start().then(ok => { if (ok && G.running) G.hasMic = true; }); }
+  if ((el.classList.contains('optMon') || el.classList.contains('optNs')) && Mic.stream && !Mic.external) { Mic.stop(); Mic.start().then(ok => { if (ok && G.running) G.hasMic = true; }); }
   if (el.classList.contains('optMon') && settings.monitor) toast('Use fone de ouvido. Com caixa de som perto do microfone dá microfonia (aquele apito).', 5000);
 });
 syncMonUI();
