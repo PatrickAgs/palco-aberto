@@ -287,6 +287,7 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
     <div class="stagehero">
       <canvas id="heroCv" aria-hidden="true"></canvas>
       <span class="live"><i></i>Ao vivo</span>
+      <span class="live" id="heroStyle" style="position:absolute;right:clamp(16px,3vw,32px);bottom:14px;left:auto;margin:0;background:var(--black);color:var(--bone)">Plateia: Pop</span>
       <h1 class="wordmark" id="wordmark" aria-label="Palco Aberto">Palco Aberto<span class="ast" aria-hidden="true">✱</span></h1>
     </div>
     <div class="marquee" aria-hidden="true"><div class="track" id="marquee"></div></div>
@@ -714,6 +715,17 @@ const Mic = {
     this.mon.wet.gain.setTargetAtTime((settings.monFx / 100) * 0.7, c.currentTime, 0.03);
     showLatency();
   },
+  // só conta como voz o que fica bem acima do barulho de fundo (música vazando da caixa, ventilador…)
+  rmsHist: [], floor: 0,
+  pitch(r) {
+    if (!r) return null;
+    if (!this.external) {
+      this.rmsHist.push(r.rms); if (this.rmsHist.length > 180) this.rmsHist.shift();
+      if (this.rmsHist.length % 15 === 0) { const srt = [...this.rmsHist].sort((a, b) => a - b); this.floor = srt[Math.floor(srt.length * 0.3)] || 0; }
+      if (r.rms < Math.max(0.01, this.floor * 2.4)) return null;
+    }
+    return r.f > 0 && r.clarity > 0.75 ? ftom(r.f) : null;
+  },
   read() { if (!this.an) return null; this.an.getFloatTimeDomainData(this.buf); return detectPitch(this.buf, ac().sampleRate); },
   stop() {
     if (this.mon) { try { this.mon.from.disconnect(this.mon.out); this.mon.from.disconnect(this.mon.conv); this.mon.out.disconnect(); } catch (e) {} this.mon = null; }
@@ -971,9 +983,9 @@ $('#btnStart').addEventListener('click', () => startSong());
 /* ---------------- Estado do jogo ---------------- */
 const G = { running: false, paused: false, ended: true };
 const COMMENTS = {
-  top: ['QUE VOZ ✱', 'arrasou demais', 'tô arrepiado', 'AFINADÍSSIMO', 'canta no meu casamento', 'isso é dom', 'bis! bis! bis!', 'chama pro The Voice', 'que nota foi essa', 'solta a voz!!', 'melhor que o original'],
-  mid: ['vai que vai', 'tá bonito', 'bora, refrão!', 'tô cantando junto', 'segura essa nota', 'aí sim', 'mais alto!'],
-  low: ['desafinou um tiquinho kkk', 'respira e vai', 'calma que dá', 'o microfone tá ligado?', 'volta pro tom!', 'quase lá']
+  top: ['SOCORRO QUE VOZ', 'pode subir no trio elétrico', 'arrepiei até a alma', 'tá pegando fogo, bicho! 🔥', 'cancela o show do original', 'manda o pix do ingresso', 'o vizinho tá gravando', 'QUE VOZ ✱', 'arrasou demais', 'tô arrepiado', 'AFINADÍSSIMO', 'canta no meu casamento', 'isso é dom', 'bis! bis! bis!', 'chama pro The Voice', 'que nota foi essa', 'solta a voz!!', 'melhor que o original'],
+  mid: ['confia no processo', 'tá chegando lá', 'nem foi tão ruim', 'voz de banho pós-academia', 'vai que vai', 'tá bonito', 'bora, refrão!', 'tô cantando junto', 'segura essa nota', 'aí sim', 'mais alto!'],
+  low: ['desafinou um tiquinho kkk', 'o microfone tá ligado?', 'volta pro tom!', 'meu ouvido pediu demissão', 'chama o SAMU 🚑', 'isso foi um grito de socorro?', 'o cachorro do vizinho começou a uivar', 'tá cantando ou passando mal?', 'nem o auto-tune salva', 'a nota foi pra Cabo Frio e não voltou', 'o microfone pediu férias', 'saiu do tom e foi pra outro CEP', 'parece áudio de 2 min no zap', 'cantor de chuveiro detectado', 'a vizinha bateu na parede', 'confia 🙂', 'calma, calabreso', 'é sério isso? kkkkk', 'ninguém: / você: AAAAAA', 'mds kkkkkkkkk', 'o gato saiu da sala', 'tô passando mal de rir', 'Rapaz...', 'eu: 🙂 meus ouvidos: 💀', 'isso é karaokê ou exorcismo?', 'o Shazam não reconheceu', 'até o Google Tradutor desistiu', 'pausa pro chá de camomila', 'o vidro trincou aqui', 'tá desafinando com confiança, respeito', 'erro 404: nota não encontrada', 'bota o fone que piora menos', 'cancelaram o show', 'pedindo música no Fantástico agora', 'o tom tá em outro fuso horário']
 };
 const HANDLES = ['@ana.cf', '@lucas_rj', '@bia.buzios', '@nanda', '@thiagoo', '@mari.arraial', '@duda', '@caio.mp3', '@jeh', '@vini_k', '@lari.som', '@pedrinho'];
 
@@ -1015,7 +1027,7 @@ function startSong() {
   const P = prepareGame(meta);
   Object.assign(G, P, {
     meta, id: pending.rec.id, running: true, paused: false, ended: false, auto, free: false,
-    tol: TOL[settings.diff] || 1, score: 0, combo: 0, maxCombo: 0, hype: 45, maxHype: 45,
+    tol: TOL[settings.diff] || 1, score: 0, combo: 0, maxCombo: 0, hype: 15, maxHype: 15,
     counts: { perfect: 0, great: 0, good: 0, miss: 0 }, trail: [], noteIdx: 0, lineKey: '', lastPitch: null, frame: 0,
     devSum: 0, devN: 0, lastJudgeAt: 0, lastFeedAt: performance.now(), lastSync: 0, lastT: 0, particles: [], doneAt: 0,
     latency: auto ? 0.02 : (settings.latency / 1000 + (c.outputLatency || 0) + (c.baseLatency || 0) + 0.04)
@@ -1094,7 +1106,7 @@ function update(t, dt) {
   // sincroniza voz guia
   if (G.voc && performance.now() - G.lastSync > 1500) { G.lastSync = performance.now(); if (Math.abs(G.voc.el.currentTime - G.inst.el.currentTime) > 0.1) G.voc.el.currentTime = G.inst.el.currentTime; }
   // afinação do cantor (a cada 2 quadros)
-  if (G.hasMic && Mic.an && G.frame % 2 === 0) { const r = Mic.read(); G.lastPitch = r && r.f > 0 && r.clarity > 0.72 ? ftom(r.f) : null; }
+  if (G.hasMic && Mic.an && G.frame % 2 === 0) { const r = Mic.read(); G.lastPitch = Mic.pitch(r); }
   const pm = G.hasMic ? G.lastPitch : null;
   // fecha notas que já passaram
   while (G.noteIdx < G.notes.length && G.notes[G.noteIdx].e < rt) { judgeNote(G.notes[G.noteIdx]); G.noteIdx++; }
@@ -1119,7 +1131,7 @@ function update(t, dt) {
   // linhas
   G.lines.forEach(l => { if (!l.judged && rt > l.end + 0.2) judgeLine(l); });
   // energia da plateia volta devagar para o meio
-  G.hype += (45 - G.hype) * dt * 0.06;
+  G.hype += (30 - G.hype) * dt * 0.05;
   G.hype = clamp(G.hype, 0, 100); G.maxHype = Math.max(G.maxHype, G.hype);
   // comentário ambiente
   if (settings.feed && G.hasMic && performance.now() - G.lastFeedAt > 7000 + Math.random() * 4000 && rt > (G.lines[0] ? G.lines[0].s : 0)) {
@@ -1293,7 +1305,7 @@ function buildCrowd() {
   G.people = [];
   [1, 0].forEach(row => {
     const gap = row ? 24 : 34, n = Math.ceil(W / gap) + 2;
-    for (let i = 0; i < n; i++) G.people.push({ row, x: (i - 0.5 + Math.random() * 0.7) * gap, s: (row ? 0.72 : 1) * (0.85 + Math.random() * 0.3), ph: Math.random() * 6.28, arm: Math.random(), light: Math.random() < 0.55, sway: Math.random() * 6.28 });
+    for (let i = 0; i < n; i++) G.people.push({ row, x: (i - 0.5 + Math.random() * 0.7) * gap, s: (row ? 0.72 : 1) * (0.85 + Math.random() * 0.3), ph: Math.random() * 6.28, arm: Math.random(), light: Math.random() < 0.55, sway: Math.random() * 6.28, acc: Math.random() });
   });
   const g = document.createElement('canvas'); g.width = g.height = 96; const gx = g.getContext('2d');
   for (let i = 0; i < 1100; i++) { gx.fillStyle = `rgba(0,0,0,${(Math.random() * 0.35).toFixed(2)})`; gx.fillRect(Math.random() * 96, Math.random() * 96, 1.2, 1.2); }
@@ -1307,24 +1319,11 @@ function drawCrowd(t) {
   x.fillStyle = themeColor(); x.fillRect(0, band, W, H);
   if (grainPat) { x.fillStyle = grainPat; x.fillRect(0, band, W, H); }
   const e = G.hype / 100, bps = (G.meta.bpm || 112) / 60;
+  const style = crowdStyle(G.themeKey), act = Beat.active();
   for (const p of G.people) {
     const base = p.row ? H * 0.78 : H + 6, s = p.s * Math.min(1.25, H / 110);
-    const bob = Beat.active() ? Beat.pulse * (0.55 + 0.45 * Math.sin(p.ph * 3)) * (3 + e * 12) * s : Math.max(0, Math.sin(t * bps * Math.PI * 2 + p.ph)) * (1.5 + e * 9) * s;
-    const hx = p.x + Math.sin(t * 1.3 + p.sway) * e * 3, hy = base - 48 * s - bob;
-    x.fillStyle = COL.black; x.strokeStyle = COL.black; x.lineCap = 'round';
-    // braços pra cima quando a plateia esquenta
-    if (p.arm < (e - 0.42) * 1.9) {
-      const sw = Math.sin(t * bps * Math.PI + p.ph) * 0.35;
-      x.lineWidth = 5 * s;
-      [-1, 1].forEach(side => {
-        const sx = hx + side * 11 * s, sy = hy + 18 * s, ang = -Math.PI / 2 + side * 0.35 + sw;
-        const ex = sx + Math.cos(ang) * 30 * s, ey = sy + Math.sin(ang) * 30 * s;
-        x.beginPath(); x.moveTo(sx, sy); x.lineTo(ex, ey); x.stroke();
-        if (p.light && e > 0.78 && side === 1) { x.fillStyle = COL.bone; x.fillRect(ex - 3 * s, ey - 9 * s, 6 * s, 9 * s); x.fillStyle = COL.black; }
-      });
-    }
-    x.beginPath(); x.ellipse(hx, hy + 30 * s, 17 * s, 16 * s, 0, Math.PI, 0); x.lineTo(hx + 17 * s, base + 40); x.lineTo(hx - 17 * s, base + 40); x.closePath(); x.fill();
-    x.beginPath(); x.arc(hx, hy, 9.5 * s, 0, Math.PI * 2); x.fill();
+    const ph = t * bps + p.ph * 0.04, jump = act ? Beat.pulse * (0.6 + 0.4 * Math.sin(p.ph * 3)) : Math.max(0, Math.sin(ph * Math.PI * 2));
+    drawFan(x, p, base, s, e, t, ph, jump, style, 40);
   }
 }
 
@@ -1538,12 +1537,12 @@ async function startYt() {
   let played = false;
   G.yt = new YtSource(v.id, title => {
     v.title = title; $('#stTitle').textContent = title; G.meta.title = title; if (played) rememberYt(v);
-    const q = cleanTitle(title); lookupSong(q).then(info => applyInfo(info || { artist: '', title: q, genre: '' }));
+    findSongInfo(title).then(info => { if (info) applyInfo(info); });
   }, () => { played = true; rememberYt(v); });
   Object.assign(G, {
     meta: { title: v.title || 'Vídeo do YouTube', artist: 'YouTube', duration: 0 }, id: 'yt:' + v.id,
     running: true, paused: false, ended: false, auto: false, free: true, mode: 'livre',
-    tolC: TOLC[settings.diff] || 30, score: 0, combo: 0, maxCombo: 0, hype: 45, maxHype: 45,
+    tolC: TOLC[settings.diff] || 30, score: 0, combo: 0, maxCombo: 0, hype: 15, maxHype: 15,
     counts: { perfect: 0, great: 0, good: 0, miss: 0 }, trail: [], lines: [], notes: [], noteIdx: 0, lastPitch: null, frame: 0,
     devSum: 0, devN: 0, lastFeedAt: performance.now(), lastT: 0, particles: [], doneAt: 0,
     phrase: null, silence: 0, voicedTime: 0, offKey: 0, keyChecked: 0, keyHits: 0, hist: [], tuneSum: 0, stabSum: 0, phraseDur: 0, view: 64, cur: null
@@ -1566,7 +1565,7 @@ async function startYt() {
 function updateFree(t, dt) {
   G.frame++;
   if (Tab.an && G.frame % 6 === 0) Tab.update();
-  if (G.hasMic && Mic.an && G.frame % 2 === 0) { const r = Mic.read(); G.lastPitch = r && r.f > 0 && r.clarity > 0.72 ? ftom(r.f) : null; }
+  if (G.hasMic && Mic.an && G.frame % 2 === 0) { const r = Mic.read(); G.lastPitch = Mic.pitch(r); }
   const pm = G.hasMic ? G.lastPitch : null;
   if (pm != null) {
     G.voicedTime += dt; G.silence = 0;
@@ -1590,7 +1589,7 @@ function updateFree(t, dt) {
     if (G.phrase && G.silence > 0.35) closePhrase();
   }
   while (G.trail.length && G.trail[0].t < t - 4.5) G.trail.shift();
-  G.hype += (45 - G.hype) * dt * 0.06; G.hype = clamp(G.hype, 0, 100); G.maxHype = Math.max(G.maxHype, G.hype);
+  G.hype += (30 - G.hype) * dt * 0.05; G.hype = clamp(G.hype, 0, 100); G.maxHype = Math.max(G.maxHype, G.hype);
   if (settings.feed && G.hasMic && G.voicedTime > 3 && performance.now() - G.lastFeedAt > 8000 + Math.random() * 5000) { G.lastFeedAt = performance.now(); comment(G.hype > 70 ? 'top' : G.hype > 40 ? 'mid' : 'low'); }
   G.score = freeNota(false) * 100;
 }
@@ -1607,7 +1606,7 @@ function closePhrase() {
   showJudge(j);
   if (j === 'perfect') { flash(); confetti(30); SFX.applause(1.4, 0.8); burst(4, 'glyph'); if (G.hype > 75) SFX.crowdVoice('woo'); if (Math.random() < 0.6) comment('top'); }
   else if (j === 'great') { SFX.applause(0.8, 0.35); burst(2, 'glyph'); if (Math.random() < 0.35) comment('mid'); }
-  else if (j === 'miss') { if (G.hype < 40) SFX.crowdVoice('boo'); if (Math.random() < 0.5) comment('low'); }
+  else if (j === 'miss') { if (G.hype < 40) SFX.crowdVoice('boo'); if (Math.random() < 0.7) comment('low'); }
   if (G.combo && G.combo % 5 === 0 && j !== 'miss') { announce('Combo ×' + G.combo); SFX.ding(); SFX.whistle(); shake(); burst(8, 'glyph'); }
   const cb = $('#combo'); cb.textContent = G.combo; cb.classList.toggle('hot', G.combo >= 5);
 }
@@ -1788,7 +1787,8 @@ const THEMES = {
   sertanejo:  { name: 'Sertanejo', color: '#ffb020', glyphs: ['★', '✦', '♪', '☀'], lines: ['ÊÊÊ BOI', 'modão raiz', 'chama o violeiro', 'sofrência no talo', 'bota mais uma'] },
   funk:       { name: 'Funk e Rap', color: '#39ff88', glyphs: ['✦', '⚡', '♪', '✱'], lines: ['TÁ TOCANDO!!', 'solta o grave', 'o baile parou pra ver', 'que flow', 'é o fluxo'] },
   rock:       { name: 'Rock', color: '#ff4a3d', glyphs: ['⚡', '✖', '★', '♪'], lines: ['ROCK AND ROLL', 'air guitar ligado', 'headbang geral', 'que agudo!', 'toca Raul!'] },
-  samba:      { name: 'Samba e MPB', color: '#ff8a1f', glyphs: ['♪', '✿', '☀', '★'], lines: ['é pagode!', 'chama o cavaco', 'samba no pé', 'roda de samba aqui', 'que poesia'] },
+  indie:      { name: 'Indie', color: '#b9a3ff', glyphs: ['✿', '☾', '♪', '✦'], lines: ['vibe de festival', 'muito indie isso', 'tá no meu Wrapped', 'sad boy hours', 'arte demais', 'conhecia antes de ficar famoso'] },
+  samba:      { name: 'Pagode e Samba', color: '#ff8a1f', glyphs: ['♪', '✿', '☀', '★'], lines: ['é pagode!', 'chama o cavaco', 'samba no pé', 'roda de samba aqui', 'que poesia'] },
   gospel:     { name: 'Gospel', color: '#7fd1ff', glyphs: ['✦', '♥', '♪', '☁'], lines: ['arrepiei', 'glória!', 'voz abençoada', 'louvor lindo', 'que unção'] },
   eletronica: { name: 'Eletrônica', color: '#00e5ff', glyphs: ['◆', '✦', '♪', '✱'], lines: ['DROP!!', 'pista pegando fogo', 'sobe o som DJ', 'rave no karaokê', 'tuts tuts tuts'] },
   reggae:     { name: 'Reggae', color: '#7ddc4a', glyphs: ['♪', '☀', '✿', '✦'], lines: ['good vibes', 'paz e amor', 'balança devagar', 'vibe de praia', 'relax total'] }
@@ -1806,7 +1806,8 @@ function themeFromGenre(g) {
   g = (g || '').toLowerCase();
   if (/sertanej|country|forr/.test(g)) return 'sertanejo';
   if (/funk|hip-hop|hip hop|rap|trap/.test(g)) return 'funk';
-  if (/rock|metal|punk|alternativ|grunge/.test(g)) return 'rock';
+  if (/indie|alternativ|lo-?fi|folk/.test(g)) return 'indie';
+  if (/rock|metal|punk|grunge/.test(g)) return 'rock';
   if (/r&b|soul|rom[aâ]nt|ballad|balada|bolero/.test(g)) return 'romantica';
   if (/samba|pagode|mpb|ax[eé]|bossa|brasil|brazil/.test(g)) return 'samba';
   if (/gospel|christian|crist|religi|worship/.test(g)) return 'gospel';
@@ -1814,22 +1815,40 @@ function themeFromGenre(g) {
   if (/reggae|ska/.test(g)) return 'reggae';
   return 'pop';
 }
-function setTheme(key) { G.theme = THEMES[key] || THEMES.pop; $('#stage').style.setProperty('--theme', G.theme.color); COL.theme = G.theme.color; }
+function setTheme(key) { G.themeKey = THEMES[key] ? key : 'pop'; G.theme = THEMES[G.themeKey]; $('#stage').style.setProperty('--theme', G.theme.color); COL.theme = G.theme.color; }
 function themeColor() { return (G.theme && G.theme.color) || COL.yellow; }
 function cleanTitle(t) {
   return String(t || '')
     .replace(/[【\[(（][^】\])）]*[】\])）]/g, ' ')
-    .replace(/\b(karaok[eê]|instrumental|playback|lyrics?|letra|with guide melody|guide melody|vers[aã]o|version|official|oficial|video|v[ií]deo|hd|4k|cover|sing ?along|com letra|ft|feat)\b\.?/gi, ' ')
+    .replace(/\b(karaok[eê]|instrumental|playback|lyrics?|letra|with guide melody|guide melody|vers[aã]o|version|official|oficial|video|v[ií]deo|hd|4k|cover|sing ?along|com letra|ft|feat|karafun|sing king|singking|zoom|lyric video|audio|áudio)\b\.?/gi, ' ')
     .replace(/[|–—\-_]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
-function lookupSong(q) {
+const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\(.*?\)|\[.*?\]/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+const STOP = new Set(['the', 'a', 'o', 'e', 'de', 'da', 'do', 'and', 'feat', 'ft', 'with', 'version', 'remastered', 'remaster', 'ao', 'vivo', 'live']);
+function matchScore(r, ref) {
+  const R = new Set(norm(ref).split(' ')), part = t => { const w = norm(t).split(' ').filter(x => x && !STOP.has(x)); return w.length ? w.filter(x => R.has(x)).length / w.length : 0; };
+  return { t: part(r.trackName), a: part(r.artistName) };
+}
+async function findSongInfo(raw) {
+  const parts = String(raw).split(/\s[-–—|]\s|\||【|】|\[|\]/).map(cleanTitle).filter(p => p && p.length > 1);
+  const tries = [...new Set([cleanTitle(raw), parts.slice(0, 2).join(' '), parts[0], parts[1] && parts[1] + ' ' + parts[0]].filter(Boolean))];
+  for (const q of tries) { const info = await lookupSong(q, raw); if (info) return info; }
+  return null;
+}
+function lookupSong(q, ref) {
+  ref = ref || q;
   return new Promise(res => {
     if (!q) return res(null);
     let done = false; const cb = 'itcb' + Date.now() + Math.floor(Math.random() * 1000); const sc = document.createElement('script');
     const fin = v => { if (done) return; done = true; try { delete window[cb]; } catch (e) {} sc.remove(); res(v); };
-    window[cb] = j => { const r = (j && j.results || [])[0]; fin(r ? { artist: r.artistName, title: r.trackName, year: (r.releaseDate || '').slice(0, 4), genre: r.primaryGenreName || '', cover: (r.artworkUrl100 || '').replace('100x100bb', '400x400bb') } : null); };
+    window[cb] = j => {
+      let best = null, bs = 0;
+      (j && j.results || []).forEach(r => { const m = matchScore(r, ref), sc = m.t * 2 + m.a; if (m.t >= 0.6 && m.a >= 0.5 && sc > bs) { bs = sc; best = r; } });
+      const r = best;
+      fin(r ? { artist: r.artistName, title: r.trackName, year: (r.releaseDate || '').slice(0, 4), genre: r.primaryGenreName || '', cover: (r.artworkUrl100 || '').replace('100x100bb', '400x400bb') } : null);
+    };
     sc.onerror = () => fin(null); setTimeout(() => fin(null), 7000);
-    sc.src = 'https://itunes.apple.com/search?term=' + encodeURIComponent(q) + '&entity=song&limit=1&country=BR&callback=' + cb;
+    sc.src = 'https://itunes.apple.com/search?term=' + encodeURIComponent(q) + '&entity=song&limit=15&country=BR&callback=' + cb;
     document.head.appendChild(sc);
   });
 }
@@ -1876,6 +1895,82 @@ function drawBeams(x, W, H, t) {
     x.lineTo(sx + Math.sin(ang + spread) * len, Math.cos(ang + spread) * len); x.closePath(); x.fill();
   }
   x.restore();
+}
+
+
+/* ---------------- Plateia dançando (por estilo) ---------------- */
+const CROWD_STYLES = ['pop', 'sertanejo', 'pagode', 'indie', 'rock', 'funk'];
+const CROWD_NAMES = { pop: 'Pop', sertanejo: 'Sertanejo', pagode: 'Pagode', indie: 'Indie', rock: 'Rock', funk: 'Funk' };
+const STYLE_THEME = { pop: 'pop', sertanejo: 'sertanejo', pagode: 'samba', indie: 'indie', rock: 'rock', funk: 'funk' };
+function crowdStyle(themeKey) { return { sertanejo: 'sertanejo', samba: 'pagode', indie: 'indie', rock: 'rock', funk: 'funk', reggae: 'pagode' }[themeKey] || 'pop'; }
+const DANCE = { pop: [10, 5], sertanejo: [6, 7], pagode: [5, 8], indie: [4, 3], rock: [13, 2], funk: [14, 4] }; // [pulo, ginga lateral]
+function drawFan(x, p, base, s, e, t, ph, jump, style, bottom) {
+  const amp = 0.35 + 0.65 * e, [jumpK, swayK] = DANCE[style] || DANCE.pop;
+  const sway = Math.sin(ph * Math.PI) * amp;
+  const cx = p.x, hx = cx + sway * swayK * s;
+  let hy = base - 48 * s - jump * amp * jumpK * s;
+  let tilt = 0;
+  if (style === 'rock' && p.acc < 0.6) { tilt = Math.sin(ph * Math.PI * 2) * 0.45 * amp; hy += Math.max(0, Math.sin(ph * Math.PI * 2)) * 4 * s * amp; }
+  if (style === 'indie') tilt = Math.sin(ph * Math.PI * 2) * 0.18 * amp;
+  const K = '#000'; x.fillStyle = K; x.strokeStyle = K; x.lineCap = 'round'; x.lineJoin = 'round';
+  const dancing = p.arm < 0.3 + e * 0.9;
+  const hands = [];
+  const arm = (side, ang, len, elbow) => {
+    const sx = hx + side * 11 * s, sy = hy + 18 * s;
+    x.lineWidth = 5 * s; x.beginPath(); x.moveTo(sx, sy);
+    let ex, ey;
+    if (elbow) { const mx = sx + elbow[0] * s, my = sy + elbow[1] * s; ex = mx + elbow[2] * s; ey = my + elbow[3] * s; x.lineTo(mx, my); x.lineTo(ex, ey); }
+    else { ex = sx + Math.cos(ang) * len * s; ey = sy + Math.sin(ang) * len * s; x.lineTo(ex, ey); }
+    x.stroke(); hands.push([ex, ey, ang, side]);
+  };
+  if (dancing) {
+    const beat2 = Math.sin(ph * Math.PI * 2);
+    if (style === 'pop') { [-1, 1].forEach(sd => arm(sd, -Math.PI / 2 + sd * 0.3 + sway * 0.45, 30)); }
+    else if (style === 'funk') { [-1, 1].forEach(sd => arm(sd, -Math.PI / 2 + sd * 0.45 + sd * Math.sin(ph * Math.PI) * 0.55, 30)); }
+    else if (style === 'rock') { const len = 26 + 6 * jump; arm(1, -Math.PI / 2 + 0.22, len); if (p.acc < 0.4) arm(-1, -Math.PI / 2 - 0.22, len); }
+    else if (style === 'indie') { arm(1, -Math.PI / 2 + 0.25 + beat2 * 0.12, 28); }
+    else if (style === 'sertanejo') {
+      arm(1, -Math.PI / 2 + Math.sin(t * 6 + p.ph) * 0.55, 30);
+      arm(-1, 0, 0, [-13, 9, 7, 13]); // mão na cintura
+    } else if (style === 'pagode') {
+      if (p.acc > 0.62) { arm(1, -Math.PI / 2 + 0.2 + beat2 * 0.15, 30); arm(-1, 0, 0, [-12, 10, 8, 10]); }
+      else { const clap = Math.abs(Math.cos(ph * Math.PI)); [-1, 1].forEach(sd => arm(sd, 0, 0, [sd * 9, 8, -sd * (6 + 6 * clap), -6])); }
+    }
+  }
+  // corpo inclinado acompanhando a ginga
+  x.beginPath(); x.ellipse(hx, hy + 30 * s, 17 * s, 16 * s, 0, Math.PI, 0);
+  x.lineTo(cx + 17 * s, base + bottom); x.lineTo(cx - 17 * s, base + bottom); x.closePath(); x.fill();
+  // cabeça + acessório do estilo
+  x.save(); x.translate(hx, hy); x.rotate(tilt);
+  if (style === 'rock' && p.acc < 0.55) { x.beginPath(); x.moveTo(-10 * s, -3 * s); x.quadraticCurveTo(-17 * s + tilt * 8 * s, 14 * s, -13 * s, 26 * s); x.lineTo(13 * s, 26 * s); x.quadraticCurveTo(17 * s + tilt * 8 * s, 14 * s, 10 * s, -3 * s); x.closePath(); x.fill(); }
+  x.beginPath(); x.arc(0, 0, 9.5 * s, 0, Math.PI * 2); x.fill();
+  if (p.acc < 0.75) {
+    if (style === 'sertanejo') {
+      x.beginPath(); x.ellipse(0, -6 * s, 17 * s, 3.6 * s, 0, 0, Math.PI * 2); x.fill();
+      x.beginPath(); x.moveTo(-8 * s, -6 * s); x.quadraticCurveTo(-9 * s, -19 * s, -3 * s, -17 * s); x.quadraticCurveTo(0, -13 * s, 3 * s, -17 * s); x.quadraticCurveTo(9 * s, -19 * s, 8 * s, -6 * s); x.closePath(); x.fill();
+    } else if (style === 'funk' || (style === 'pagode' && p.acc >= 0.35)) {
+      x.beginPath(); x.arc(0, -2 * s, 10.5 * s, Math.PI, 0); x.fill();
+      const dir = p.ph > 3.14 ? 1 : -1; x.fillRect(dir > 0 ? 0 : -17 * s, -4 * s, 17 * s, 3.4 * s);
+    } else if (style === 'pagode') {
+      x.beginPath(); x.ellipse(0, -6 * s, 14 * s, 3 * s, 0, 0, Math.PI * 2); x.fill(); x.fillRect(-7.5 * s, -15 * s, 15 * s, 9 * s);
+    } else if (style === 'indie') {
+      if (p.acc < 0.4) { x.beginPath(); x.arc(0, -4 * s, 10.5 * s, Math.PI, 0); x.fill(); x.fillRect(-11 * s, -5 * s, 22 * s, 4 * s); x.beginPath(); x.arc(0, -16 * s, 3.2 * s, 0, Math.PI * 2); x.fill(); }
+      else { x.beginPath(); x.arc(0, -12 * s, 4.8 * s, 0, Math.PI * 2); x.fill(); }
+    } else if (style === 'rock' && p.acc >= 0.55) {
+      for (let k = -2; k <= 2; k++) { x.beginPath(); x.moveTo(k * 3 * s - 2.4 * s, -8 * s); x.lineTo(k * 3 * s, -18 * s + Math.abs(k) * 2.5 * s); x.lineTo(k * 3 * s + 2.4 * s, -8 * s); x.fill(); }
+    } else if (style === 'pop' && p.acc < 0.3) {
+      [-1, 1].forEach(sd => { x.beginPath(); x.moveTo(sd * 3 * s, -8 * s); x.lineTo(sd * 8 * s, -17 * s); x.lineTo(sd * 10 * s, -5 * s); x.fill(); });
+    }
+  }
+  x.restore();
+  // objetos nas mãos
+  hands.forEach(([ex, ey, ang, side]) => {
+    if (style === 'rock' && side === 1) { x.lineWidth = 2.6 * s; x.beginPath(); x.moveTo(ex - 2 * s, ey); x.lineTo(ex - 3.6 * s, ey - 7 * s); x.moveTo(ex + 2 * s, ey); x.lineTo(ex + 3.6 * s, ey - 7 * s); x.stroke(); }
+    else if (style === 'pagode' && side === 1 && p.acc > 0.62) { x.lineWidth = 2.6 * s; x.beginPath(); x.arc(ex, ey - 8 * s + Math.sin(t * 14) * 1.5 * s, 8 * s, 0, Math.PI * 2); x.stroke(); }
+    else if (style === 'sertanejo' && side === 1 && p.acc > 0.75) { x.beginPath(); x.ellipse(ex, ey - 4 * s, 10 * s, 3.2 * s, Math.sin(t * 6 + p.ph) * 0.5, 0, Math.PI * 2); x.fill(); }
+    else if (style === 'pop' && side === 1 && p.light) { x.save(); x.strokeStyle = COL.bone || '#f5f4f0'; x.lineWidth = 3.4 * s; x.beginPath(); x.moveTo(ex, ey); x.lineTo(ex + Math.cos(ang) * 13 * s, ey + Math.sin(ang) * 13 * s); x.stroke(); x.restore(); }
+    else if (p.light && e > 0.75 && side === 1 && ang < -1) { x.fillStyle = COL.bone || '#f5f4f0'; x.fillRect(ex - 3 * s, ey - 9 * s, 6 * s, 9 * s); x.fillStyle = K; }
+  });
 }
 
 /* ---------------- Ranking geral ---------------- */
@@ -1941,13 +2036,15 @@ const Hero = {
     const r = this.cv.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1);
     this.W = r.width; this.H = r.height; this.cv.width = r.width * d; this.cv.height = r.height * d;
     this.x = this.cv.getContext('2d'); this.x.setTransform(d, 0, 0, d, 0, 0); this.people = [];
-    [1, 0].forEach(row => { const gap = row ? 26 : 36, n = Math.ceil(this.W / gap) + 2; for (let i = 0; i < n; i++) this.people.push({ row, x: (i - 0.5 + Math.random() * 0.7) * gap, s: (row ? 0.75 : 1) * (0.85 + Math.random() * 0.3), ph: Math.random() * 6.28, arm: Math.random(), light: Math.random() < 0.5 }); });
+    [1, 0].forEach(row => { const gap = row ? 26 : 36, n = Math.ceil(this.W / gap) + 2; for (let i = 0; i < n; i++) this.people.push({ row, x: (i - 0.5 + Math.random() * 0.7) * gap, s: (row ? 0.75 : 1) * (0.85 + Math.random() * 0.3), ph: Math.random() * 6.28, arm: Math.random(), light: Math.random() < 0.5, acc: Math.random() }); });
     const g = document.createElement('canvas'); g.width = g.height = 96; const gx = g.getContext('2d');
     for (let i = 0; i < 1100; i++) { gx.fillStyle = `rgba(0,0,0,${(Math.random() * 0.35).toFixed(2)})`; gx.fillRect(Math.random() * 96, Math.random() * 96, 1.2, 1.2); }
     this.grain = this.x.createPattern(g, 'repeat');
   },
   draw(t) {
     const x = this.x, W = this.W, H = this.H; if (!x || !W) return;
+    const st = CROWD_STYLES[Math.floor(t / 7) % CROWD_STYLES.length];
+    if (st !== this.style) { this.style = st; const lab = $('#heroStyle'); if (lab) lab.textContent = 'Plateia: ' + CROWD_NAMES[st]; }
     const Y = COL.yellow || '#f0e226', beat = (t * 112 / 60) % 1, pulse = Math.pow(1 - beat, 3), e = 0.55 + 0.45 * Math.sin(t * 0.35);
     x.fillStyle = COL.ink || '#19181a'; x.fillRect(0, 0, W, H);
     x.save(); x.fillStyle = Y;
@@ -1958,19 +2055,12 @@ const Hero = {
     }
     x.restore();
     const band = H * (0.74 - pulse * 0.02), cs = Math.min(1.4, H / 380);
-    x.fillStyle = Y; x.fillRect(0, band, W, H); if (this.grain) { x.fillStyle = this.grain; x.fillRect(0, band, W, H); }
+    x.fillStyle = THEMES[STYLE_THEME[this.style || 'pop']].color; x.fillRect(0, band, W, H); if (this.grain) { x.fillStyle = this.grain; x.fillRect(0, band, W, H); }
+    const style = this.style;
+    if (false) { this.style = style; const lab = $('#heroStyle'); if (lab) lab.textContent = 'Plateia: ' + CROWD_NAMES[style]; }
     for (const p of this.people) {
-      const s = p.s * cs, base = p.row ? H - 30 * cs : H + 8, bob = pulse * (0.5 + 0.5 * Math.sin(p.ph * 3)) * (3 + e * 9) * s;
-      const hx = p.x + Math.sin(t * 1.2 + p.ph) * 2, hy = base - 48 * s - bob;
-      x.fillStyle = '#000'; x.strokeStyle = '#000'; x.lineCap = 'round';
-      if (p.arm < (e - 0.4) * 1.6) {
-        x.lineWidth = 5 * s; const sw = Math.sin(t * 2 + p.ph) * 0.35;
-        [-1, 1].forEach(side => { const sx = hx + side * 11 * s, sy = hy + 18 * s, a = -Math.PI / 2 + side * 0.35 + sw, ex = sx + Math.cos(a) * 30 * s, ey = sy + Math.sin(a) * 30 * s;
-          x.beginPath(); x.moveTo(sx, sy); x.lineTo(ex, ey); x.stroke();
-          if (p.light && e > 0.75 && side === 1) { x.fillStyle = COL.bone || '#f5f4f0'; x.fillRect(ex - 3 * s, ey - 9 * s, 6 * s, 9 * s); x.fillStyle = '#000'; } });
-      }
-      x.beginPath(); x.ellipse(hx, hy + 30 * s, 17 * s, 16 * s, 0, Math.PI, 0); x.lineTo(hx + 17 * s, base + 60); x.lineTo(hx - 17 * s, base + 60); x.closePath(); x.fill();
-      x.beginPath(); x.arc(hx, hy, 9.5 * s, 0, Math.PI * 2); x.fill();
+      const s = p.s * cs, base = p.row ? H - 30 * cs : H + 8, ph = t * 112 / 60 + p.ph * 0.04;
+      drawFan(x, p, base, s, e, t, ph, pulse * (0.6 + 0.4 * Math.sin(p.ph * 3)), style, 60);
     }
   }
 };
