@@ -169,8 +169,8 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
 .count{display:flex;gap:8px;height:6px}
 .count i{width:44px;background:var(--yellow);transition:opacity .2s}
 .count i.off{opacity:.15}
-.feed{position:absolute;left:var(--gutter-l);top:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-start;pointer-events:none;max-width:min(62%,320px)}
-.feed div{font:400 12px/1.25 var(--mono);color:var(--bone);background:rgba(0,0,0,.55);border:1px solid var(--charcoal);border-radius:900px;padding:6px 12px;animation:feed 4.5s ease forwards;text-align:left;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feed{position:absolute;left:var(--gutter-l);top:12px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;pointer-events:none;max-width:min(80%,520px);z-index:2}
+.feed div{font:400 clamp(15px,1.9vw,20px)/1.25 var(--mono);color:var(--bone);background:rgba(0,0,0,.72);border:1px solid var(--charcoal);border-radius:900px;padding:10px 18px;animation:feed 5.5s ease forwards;text-align:left;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .feed div b{font-weight:400;color:var(--yellow)}
 @keyframes feed{0%{opacity:0;transform:translateY(8px)}8%,80%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-6px)}}
 .announce{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
@@ -1090,7 +1090,7 @@ function comment(kind) {
   const feed = $('#feed'); const d = document.createElement('div');
   d.innerHTML = `<b>${esc(pick(HANDLES))}</b> ${esc(pick(COMMENTS[kind]))}`;
   feed.appendChild(d); while (feed.children.length > 3) feed.firstChild.remove();
-  setTimeout(() => d.remove(), 4600);
+  setTimeout(() => d.remove(), 5600);
 }
 const fxCv = $('#fx');
 function burst(n, kind) {
