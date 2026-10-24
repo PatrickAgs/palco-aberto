@@ -102,9 +102,23 @@ h2 em{font-style:normal;box-shadow:inset 0 -.16em 0 var(--yellow)}
 .ytcard b{font-weight:400;font-size:15px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .ytcard span{font:400 11px/1.2 var(--mono);color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
 .stage.yt .modetag{right:auto;left:var(--gutter-l)}
-.stage.yt{grid-template-rows:auto auto minmax(110px,1fr) auto minmax(84px,15%)}
-.ytbox{position:relative;background:var(--black);display:flex;justify-content:center;min-height:0}
-.ytbox iframe{display:block;width:min(100%,calc(44vh * 16 / 9));aspect-ratio:16/9;height:auto;border:0}
+.stage.yt{grid-template-rows:auto minmax(0,1fr) minmax(80px,18vh) auto minmax(76px,13%)}
+.ytbox{position:relative;background:var(--black);display:flex;justify-content:center;min-height:0;overflow:hidden}
+.ytbox iframe{display:block;height:100%;width:auto;max-width:100%;aspect-ratio:16/9;border:0}
+.intro{position:absolute;left:0;right:0;top:12%;display:flex;justify-content:center;pointer-events:none;z-index:4;padding-inline:16px}
+.intro-card{display:flex;gap:18px;align-items:center;background:var(--ink);border:1px solid var(--theme,var(--yellow));padding:14px 22px 14px 14px;max-width:min(560px,100%);animation:introIn 6s cubic-bezier(.2,.8,.2,1) forwards}
+.intro-card img{width:clamp(72px,14vw,120px);aspect-ratio:1;object-fit:cover;flex:none;background:var(--charcoal)}
+.intro-card div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.intro-card .label{color:var(--theme,var(--yellow))}
+.intro-card b{font:400 clamp(22px,3.6vw,34px)/1.05 var(--sans);letter-spacing:-.015em;overflow-wrap:anywhere}
+.intro-card span.art{color:var(--sand);font-size:16px}
+@keyframes introIn{0%{opacity:0;transform:translateY(16px) scale(.96)}8%{opacity:1;transform:none}85%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-10px)}}
+.rk-row{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto;gap:12px;align-items:baseline}
+.rk-row .pos{font:400 13px/1 var(--mono);color:var(--mute)}
+.rank li.top .pos,.rank li.top .nt{color:var(--yellow)}
+.rk-row .who{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rk-row .who small{display:block;font:400 12px/1.3 var(--mono);color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rk-row .nt{font:400 22px/1 var(--sans);font-variant-numeric:tabular-nums}
 .yttap{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);font:400 12px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:10px 16px;border-radius:900px;background:var(--yellow);color:var(--black);pointer-events:none;white-space:nowrap}
 
 /* ---------- folhas (modais) ---------- */
@@ -232,6 +246,7 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
   <nav class="topnav" aria-label="Ações">
     <button class="pill" id="btnImport" type="button">Importar pacote .zip</button>
     <button class="pill" id="btnHelp" type="button">Como gerar músicas</button>
+    <button class="pill" id="btnRanking" type="button">Ranking</button>
     <button class="pill" id="btnSettings" type="button">Ajustes</button>
     <input type="file" id="fileZip" accept=".zip,application/zip" multiple hidden>
   </nav>
@@ -287,6 +302,10 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
     <div class="panel-head">
       <div style="min-width:0"><h3 id="setupTitle">Música</h3><p class="sub" id="setupArtist"></p></div>
       <button class="icon" type="button" data-close aria-label="Fechar">✕</button>
+    </div>
+    <div class="field">
+      <label class="label" for="whoName">Quem vai cantar?</label>
+      <input type="text" id="whoName" maxlength="20" autocomplete="nickname" placeholder="Seu nome no ranking">
     </div>
     <div class="field">
       <span class="label">Dificuldade</span>
@@ -392,9 +411,25 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
     <div class="hype"><span>Plateia</span><div class="bars" id="hypeBars"></div></div>
   </div>
   <div class="crowd" id="crowdBox"><canvas id="crowd"></canvas></div>
+  <div class="intro" id="intro" hidden></div>
   <canvas class="fx" id="fx"></canvas>
   <div class="flash" id="flash"></div>
 </section>
+
+<!-- ranking -->
+<div class="sheet" id="rankSheet" hidden role="dialog" aria-modal="true" aria-labelledby="rkTitle">
+  <div class="panel">
+    <div class="panel-head"><h3 id="rkTitle">Ranking</h3><button class="icon" type="button" data-close aria-label="Fechar">✕</button></div>
+    <div class="seg" id="rkTabs">
+      <button class="pill sm" type="button" data-rk="top">Melhores notas</button>
+      <button class="pill sm" type="button" data-rk="singers">Cantores</button>
+      <button class="pill sm" type="button" data-rk="songs">Músicas</button>
+    </div>
+    <ol class="rank" id="rkList"></ol>
+    <p class="sub" style="font-size:13px;line-height:1.4">O ranking fica salvo neste aparelho e neste navegador.</p>
+    <div class="actions"><button class="pill fill" type="button" data-close>Fechar</button><button class="pill ghost sm" type="button" id="rkClear">Zerar ranking</button></div>
+  </div>
+</div>
 
 <!-- pausa -->
 <div class="sheet" id="pauseSheet" hidden role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
@@ -434,6 +469,7 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
         <div class="actions">
           <button class="pill fill" type="button" id="btnAgain">Cantar de novo</button>
           <button class="pill" type="button" id="btnLib">Escolher outra</button>
+          <button class="pill ghost" type="button" id="btnRank2">Ranking geral</button>
         </div>
       </div>
     </div>
@@ -851,7 +887,7 @@ async function openSetup(id) {
   const rec = songs.find(s => s.id === id); if (!rec) return;
   ac();
   pending = { rec, inst: rec.inst || null, voc: rec.voc || null, meta: rec.meta };
-  setupMode(false);
+  setupMode(false); $('#whoName').value = settings.name === 'Você' ? '' : settings.name;
   $('#setupTitle').textContent = rec.meta.title; $('#setupArtist').textContent = rec.meta.artist || '';
   syncDiff(); $('#guide').value = settings.guide; $('#guideOut').textContent = settings.guide + '%';
   $('#autoSing').checked = settings.autoSing;
@@ -944,6 +980,9 @@ function startSong() {
   $('#modeTag').textContent = G.auto ? 'Modo show · voz original' : G.mode === 'pitch' ? 'Afinação · ' + ({ facil: 'fácil', normal: 'normal', dificil: 'difícil' }[settings.diff]) : G.mode === 'ritmo' ? 'Modo ritmo' : 'Sem microfone';
   $$('.sheet').forEach(s => s.hidden = true);
   stageLayout(false);
+  setTheme('pop'); G.info = null; Beat.attach(G.inst.g);
+  if (meta.lyricsSource === 'demo') { G.info = { artist: 'Palco Aberto', title: meta.title }; showIntro({ title: meta.title, artist: 'Composição demo do app', year: '2026', genre: 'Pop' }); }
+  else lookupSong(((meta.artist || '') + ' ' + meta.title).trim()).then(info => applyInfo(info || { artist: meta.artist || '', title: meta.title, genre: '' }));
   $('#results').hidden = true; $('#home').hidden = true; $('#eq').hidden = true; $('#stage').hidden = false;
   $('#stTitle').textContent = meta.title; $('#stArtist').textContent = meta.artist || '';
   $('#feed').innerHTML = ''; $('#combo').textContent = '0'; $('#stScore').textContent = '0';
@@ -999,6 +1038,7 @@ function loop(id) {
   requestAnimationFrame(() => loop(id));
   const t = src.time();
   const dt = clamp(t - G.lastT, 0, 0.1); G.lastT = t;
+  Beat.update(performance.now() / 1000, dt || 1 / 60);
   if (G.yt) { if (!G.paused && G.yt.playing()) updateFree(t, dt); drawFree(t); }
   else { if (!G.paused) update(t, dt); draw(t); }
 }
@@ -1085,21 +1125,24 @@ function showJudge(j) {
 function announce(txt) { const b = $('#announce'); b.textContent = txt; b.classList.remove('go'); void b.offsetWidth; b.classList.add('go'); }
 function flash() { const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
 function shake() { const s = $('#stage'); s.classList.remove('shake'); void s.offsetWidth; s.classList.add('shake'); }
-function comment(kind) {
+function comment(kind, forced) {
   if (!settings.feed) return;
   const feed = $('#feed'); const d = document.createElement('div');
-  d.innerHTML = `<b>${esc(pick(HANDLES))}</b> ${esc(pick(COMMENTS[kind]))}`;
+  let text = forced; const r = Math.random();
+  if (!text && G.info && kind !== 'low' && r < 0.3) text = pick(SONG_LINES)(G.info.artist, G.info.title);
+  else if (!text && G.theme && kind !== 'low' && r < 0.55) text = pick(G.theme.lines);
+  d.innerHTML = `<b>${esc(pick(HANDLES))}</b> ${esc(text || pick(COMMENTS[kind]))}`;
   feed.appendChild(d); while (feed.children.length > 3) feed.firstChild.remove();
   setTimeout(() => d.remove(), 5600);
 }
 const fxCv = $('#fx');
 function burst(n, kind) {
   const W = fxCv.clientWidth, H = fxCv.clientHeight;
-  for (let i = 0; i < n; i++) G.particles.push({ kind, x: W * (0.08 + Math.random() * 0.84), y: H - 30 - Math.random() * 40, vx: (Math.random() - 0.5) * 40, vy: -(90 + Math.random() * 120), life: 0, max: 1.6 + Math.random() * 0.8, ch: pick(['✱', '♥', '♪', '✱', '★']), size: 16 + Math.random() * 18, col: Math.random() < 0.7 ? 'yellow' : 'bone', rot: 0, vr: (Math.random() - 0.5) * 3 });
+  for (let i = 0; i < n; i++) G.particles.push({ kind, x: W * (0.08 + Math.random() * 0.84), y: H - 30 - Math.random() * 40, vx: (Math.random() - 0.5) * 40, vy: -(90 + Math.random() * 120), life: 0, max: 1.6 + Math.random() * 0.8, ch: pick((G.theme && G.theme.glyphs) || ['✱', '♥', '♪', '★']), size: 16 + Math.random() * 18, col: Math.random() < 0.7 ? 'theme' : 'bone', rot: 0, vr: (Math.random() - 0.5) * 3 });
 }
 function confetti(n) {
   const W = fxCv.clientWidth;
-  for (let i = 0; i < n; i++) G.particles.push({ kind: 'conf', x: Math.random() * W, y: -10 - Math.random() * 60, vx: (Math.random() - 0.5) * 60, vy: 120 + Math.random() * 140, life: 0, max: 2.4, size: 5 + Math.random() * 5, col: Math.random() < 0.65 ? 'yellow' : 'bone', rot: Math.random() * 6, vr: (Math.random() - 0.5) * 10 });
+  for (let i = 0; i < n; i++) G.particles.push({ kind: 'conf', x: Math.random() * W, y: -10 - Math.random() * 60, vx: (Math.random() - 0.5) * 60, vy: 120 + Math.random() * 140, life: 0, max: 2.4, size: 5 + Math.random() * 5, col: pick(['theme', 'theme', 'yellow', 'bone']), rot: Math.random() * 6, vr: (Math.random() - 0.5) * 10 });
 }
 
 /* ---------------- Desenho ---------------- */
@@ -1108,7 +1151,7 @@ let DPR = 1, COL = {};
 function fitCanvas(cv) { const r = cv.getBoundingClientRect(); cv.width = Math.max(1, Math.round(r.width * DPR)); cv.height = Math.max(1, Math.round(r.height * DPR)); const x = cv.getContext('2d'); x.setTransform(DPR, 0, 0, DPR, 0, 0); return x; }
 function resizeAll() {
   DPR = Math.min(2, window.devicePixelRatio || 1);
-  COL = { yellow: css('--yellow'), ink: css('--ink'), bone: css('--bone'), charcoal: css('--charcoal'), sand: css('--sand'), mute: css('--mute'), black: css('--black') };
+  COL = { yellow: css('--yellow'), ink: css('--ink'), bone: css('--bone'), charcoal: css('--charcoal'), sand: css('--sand'), mute: css('--mute'), black: css('--black') }; COL.theme = themeColor();
   if ($('#stage').hidden) return;
   fitCanvas(hwCv); fitCanvas(crowdCv); fitCanvas(fxCv); buildCrowd();
 }
@@ -1132,7 +1175,7 @@ function draw(t) {
 
 function drawHighway(rt) {
   const x = hwCv.getContext('2d'), W = hwCv.width / DPR, H = hwCv.height / DPR;
-  x.fillStyle = COL.ink; x.fillRect(0, 0, W, H);
+  x.fillStyle = COL.ink; x.fillRect(0, 0, W, H); drawBeams(x, W, H, G.lastT);
   const pps = W / 4.6, px = Math.round(W * 0.22); G.playX = px;
   const pad = 14, lo = G.lo, hi = G.hi, span = hi - lo;
   const y = m => pad + (1 - (m - lo) / span) * (H - 2 * pad);
@@ -1215,12 +1258,13 @@ function drawCrowd(t) {
   const x = crowdCv.getContext('2d'), W = crowdCv.width / DPR, H = crowdCv.height / DPR; if (!G.people) return;
   x.fillStyle = COL.ink; x.fillRect(0, 0, W, H);
   // luz do palco por trás da plateia
-  x.fillStyle = COL.yellow; x.fillRect(0, H * 0.16, W, H);
-  if (grainPat) { x.fillStyle = grainPat; x.fillRect(0, H * 0.16, W, H); }
+  const band = H * (0.16 - Beat.pulse * 0.07);
+  x.fillStyle = themeColor(); x.fillRect(0, band, W, H);
+  if (grainPat) { x.fillStyle = grainPat; x.fillRect(0, band, W, H); }
   const e = G.hype / 100, bps = (G.meta.bpm || 112) / 60;
   for (const p of G.people) {
     const base = p.row ? H * 0.78 : H + 6, s = p.s * Math.min(1.25, H / 110);
-    const bob = Math.max(0, Math.sin(t * bps * Math.PI * 2 + p.ph)) * (1.5 + e * 9) * s;
+    const bob = Beat.active() ? Beat.pulse * (0.55 + 0.45 * Math.sin(p.ph * 3)) * (3 + e * 12) * s : Math.max(0, Math.sin(t * bps * Math.PI * 2 + p.ph)) * (1.5 + e * 9) * s;
     const hx = p.x + Math.sin(t * 1.3 + p.sway) * e * 3, hy = base - 48 * s - bob;
     x.fillStyle = COL.black; x.strokeStyle = COL.black; x.lineCap = 'round';
     // braços pra cima quando a plateia esquenta
@@ -1278,6 +1322,8 @@ function finish() {
   const nota = G.hasMic ? Math.round(clamp(G.score / 100, 0, 100)) : null;
   // ranking local
   let rank = store.get('rank:' + G.id, []); const entry = { name: G.auto ? 'Voz original' : settings.name, nota: nota ?? 0, at: Date.now() };
+  if (nota != null && !G.auto) { const h = store.get('history', []); h.push({ name: entry.name, song: (G.info && G.info.title) || G.meta.title, artist: (G.info && G.info.artist) || G.meta.artist || '', id: G.id, nota, at: entry.at }); store.set('history', h.slice(-500)); }
+  Beat.detach(); $('#intro').hidden = true;
   if (nota != null) { rank.push(entry); rank.sort((a, b) => b.nota - a.nota); rank = rank.slice(0, 5); store.set('rank:' + G.id, rank); }
   $('#stage').hidden = true; $('#results').hidden = false; $('#results').scrollTop = 0;
   $('#resSong').textContent = G.meta.title; $('#resWho').textContent = entry.name;
@@ -1420,7 +1466,7 @@ function openYtSetup(v) {
   if (location.protocol === 'file:') { toast(FILE_MSG, 7000); return; }
   ac();
   pending = { yt: v, rec: { id: 'yt:' + v.id } };
-  setupMode(true);
+  setupMode(true); $('#whoName').value = settings.name === 'Você' ? '' : settings.name;
   $('#setupTitle').textContent = v.title || 'Vídeo do YouTube'; $('#setupArtist').textContent = 'YouTube · nota pela sua voz';
   syncDiff();
   const start = $('#btnStart'); start.disabled = true; start.textContent = 'Carregando o YouTube…';
@@ -1443,7 +1489,10 @@ async function startYt() {
   stopMicTest(); disposeTracks();
   if (Mic.external) Mic.detach();
   let played = false;
-  G.yt = new YtSource(v.id, title => { v.title = title; $('#stTitle').textContent = title; G.meta.title = title; if (played) rememberYt(v); }, () => { played = true; rememberYt(v); });
+  G.yt = new YtSource(v.id, title => {
+    v.title = title; $('#stTitle').textContent = title; G.meta.title = title; if (played) rememberYt(v);
+    const q = cleanTitle(title); lookupSong(q).then(info => applyInfo(info || { artist: '', title: q, genre: '' }));
+  }, () => { played = true; rememberYt(v); });
   Object.assign(G, {
     meta: { title: v.title || 'Vídeo do YouTube', artist: 'YouTube', duration: 0 }, id: 'yt:' + v.id,
     running: true, paused: false, ended: false, auto: false, free: true, mode: 'livre',
@@ -1454,7 +1503,8 @@ async function startYt() {
   });
   G.hasMic = !!Mic.an;
   $('#modeTag').textContent = !G.hasMic ? 'Sem microfone' : Tab.an ? 'YouTube · comparando com a música' : 'YouTube · só afinação';
-  Tab.reset();
+  Tab.reset(); setTheme('pop'); G.info = null;
+  if (Tab.src) Beat.attach(Tab.src); else Beat.detach();
   if (!G.hasMic) toast('Sem microfone: você canta, mas a nota fica de fora.');
   $$('.sheet').forEach(x => x.hidden = true);
   stageLayout(true);
@@ -1530,7 +1580,7 @@ function freeStats() { const { tune, stab } = freeParts(); return { tune: Math.r
 
 function drawFree(t) {
   const x = hwCv.getContext('2d'), W = hwCv.width / DPR, H = hwCv.height / DPR;
-  x.fillStyle = COL.ink; x.fillRect(0, 0, W, H);
+  x.fillStyle = COL.ink; x.fillRect(0, 0, W, H); drawBeams(x, W, H, t);
   const px = Math.round(W * 0.74), pps = px / 4; G.playX = px;
   const pad = 12, c = Math.round(G.view), lo = c - 7, hi = c + 7;
   const y = m => pad + (1 - (m - lo) / (hi - lo)) * (H - 2 * pad);
@@ -1682,6 +1732,132 @@ document.addEventListener('input', e => {
   if (el.classList.contains('optMon') && settings.monitor) toast('Use fone de ouvido. Com caixa de som perto do microfone dá microfonia (aquele apito).', 5000);
 });
 syncMonUI();
+
+
+/* ---------------- Música: tema, informações e batida ---------------- */
+const THEMES = {
+  pop:        { name: 'Pop', color: '#f0e226', glyphs: ['✱', '★', '♪', '♥'], lines: ['HINO', 'tocou muito na balada', 'essa é a minha música!!', 'refrão vem aí', 'todo mundo junto agora'] },
+  romantica:  { name: 'Romântica', color: '#ff5fa2', glyphs: ['♥', '♥', '✿', '♪'], lines: ['chorei', 'quem nunca sofreu com essa', 'dedica pra alguém!', 'sofrência boa', 'tô apaixonado'] },
+  sertanejo:  { name: 'Sertanejo', color: '#ffb020', glyphs: ['★', '✦', '♪', '☀'], lines: ['ÊÊÊ BOI', 'modão raiz', 'chama o violeiro', 'sofrência no talo', 'bota mais uma'] },
+  funk:       { name: 'Funk e Rap', color: '#39ff88', glyphs: ['✦', '⚡', '♪', '✱'], lines: ['TÁ TOCANDO!!', 'solta o grave', 'o baile parou pra ver', 'que flow', 'é o fluxo'] },
+  rock:       { name: 'Rock', color: '#ff4a3d', glyphs: ['⚡', '✖', '★', '♪'], lines: ['ROCK AND ROLL', 'air guitar ligado', 'headbang geral', 'que agudo!', 'toca Raul!'] },
+  samba:      { name: 'Samba e MPB', color: '#ff8a1f', glyphs: ['♪', '✿', '☀', '★'], lines: ['é pagode!', 'chama o cavaco', 'samba no pé', 'roda de samba aqui', 'que poesia'] },
+  gospel:     { name: 'Gospel', color: '#7fd1ff', glyphs: ['✦', '♥', '♪', '☁'], lines: ['arrepiei', 'glória!', 'voz abençoada', 'louvor lindo', 'que unção'] },
+  eletronica: { name: 'Eletrônica', color: '#00e5ff', glyphs: ['◆', '✦', '♪', '✱'], lines: ['DROP!!', 'pista pegando fogo', 'sobe o som DJ', 'rave no karaokê', 'tuts tuts tuts'] },
+  reggae:     { name: 'Reggae', color: '#7ddc4a', glyphs: ['♪', '☀', '✿', '✦'], lines: ['good vibes', 'paz e amor', 'balança devagar', 'vibe de praia', 'relax total'] }
+};
+const SONG_LINES = [
+  a => a ? `${a} ficaria orgulhoso` : 'o cantor original ficaria orgulhoso',
+  (a, t) => `${t} no karaokê é outro nível`,
+  (a, t) => `canta ${t} de novo!`,
+  a => a ? `melhor que o próprio ${a}?` : 'melhor que o original?',
+  (a, t) => `${t} é a minha!!`,
+  a => a ? `fã de ${a} chegou` : 'fã número 1 chegou',
+  (a, t) => `todo mundo sabe ${t}`
+];
+function themeFromGenre(g) {
+  g = (g || '').toLowerCase();
+  if (/sertanej|country|forr/.test(g)) return 'sertanejo';
+  if (/funk|hip-hop|hip hop|rap|trap/.test(g)) return 'funk';
+  if (/rock|metal|punk|alternativ|grunge/.test(g)) return 'rock';
+  if (/r&b|soul|rom[aâ]nt|ballad|balada|bolero/.test(g)) return 'romantica';
+  if (/samba|pagode|mpb|ax[eé]|bossa|brasil|brazil/.test(g)) return 'samba';
+  if (/gospel|christian|crist|religi|worship/.test(g)) return 'gospel';
+  if (/dance|electr|eletr|house|techno/.test(g)) return 'eletronica';
+  if (/reggae|ska/.test(g)) return 'reggae';
+  return 'pop';
+}
+function setTheme(key) { G.theme = THEMES[key] || THEMES.pop; $('#stage').style.setProperty('--theme', G.theme.color); COL.theme = G.theme.color; }
+function themeColor() { return (G.theme && G.theme.color) || COL.yellow; }
+function cleanTitle(t) {
+  return String(t || '')
+    .replace(/[【\[(（][^】\])）]*[】\])）]/g, ' ')
+    .replace(/\b(karaok[eê]|instrumental|playback|lyrics?|letra|with guide melody|guide melody|vers[aã]o|version|official|oficial|video|v[ií]deo|hd|4k|cover|sing ?along|com letra|ft|feat)\b\.?/gi, ' ')
+    .replace(/[|–—\-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function lookupSong(q) {
+  return new Promise(res => {
+    if (!q) return res(null);
+    let done = false; const cb = 'itcb' + Date.now() + Math.floor(Math.random() * 1000); const sc = document.createElement('script');
+    const fin = v => { if (done) return; done = true; try { delete window[cb]; } catch (e) {} sc.remove(); res(v); };
+    window[cb] = j => { const r = (j && j.results || [])[0]; fin(r ? { artist: r.artistName, title: r.trackName, year: (r.releaseDate || '').slice(0, 4), genre: r.primaryGenreName || '', cover: (r.artworkUrl100 || '').replace('100x100bb', '400x400bb') } : null); };
+    sc.onerror = () => fin(null); setTimeout(() => fin(null), 7000);
+    sc.src = 'https://itunes.apple.com/search?term=' + encodeURIComponent(q) + '&entity=song&limit=1&country=BR&callback=' + cb;
+    document.head.appendChild(sc);
+  });
+}
+function applyInfo(info) {
+  if (!G.running || !info) return;
+  G.info = info; setTheme(themeFromGenre(info.genre));
+  if (G.yt && info.artist) { $('#stTitle').textContent = info.title; $('#stArtist').textContent = info.artist + (info.year ? ' · ' + info.year : ''); }
+  showIntro(info);
+  setTimeout(() => G.running && comment('top', `começou ${info.title}!!`), 1500);
+}
+function showIntro(info) {
+  const el = $('#intro');
+  el.innerHTML = `<div class="intro-card">${info.cover ? `<img src="${esc(info.cover)}" alt="">` : ''}<div><span class="label">${esc([G.theme && G.theme.name, info.year].filter(Boolean).join(' · ') || 'Agora no palco')}</span><b>${esc(info.title || '')}</b><span class="art">${esc(info.artist || '')}</span></div></div>`;
+  el.hidden = false; clearTimeout(showIntro.t); showIntro.t = setTimeout(() => { el.hidden = true; }, 6100);
+}
+const Beat = {
+  an: null, node: null, avg: 0, last: 0, pulse: 0, lastBeatAt: 0,
+  attach(node) {
+    this.detach(); if (!node) return;
+    const c = ac(); this.an = c.createAnalyser(); this.an.fftSize = 1024; this.an.smoothingTimeConstant = 0;
+    node.connect(this.an); this.node = node; this.buf = new Uint8Array(this.an.frequencyBinCount); this.avg = 0; this.last = 0;
+  },
+  detach() { try { this.node && this.an && this.node.disconnect(this.an); } catch (e) {} this.an = null; this.node = null; this.pulse = 0; },
+  active() { return this.an && performance.now() / 1000 - this.lastBeatAt < 2.5; },
+  update(now, dt) {
+    this.pulse *= Math.exp(-dt * 7);
+    if (!this.an) return;
+    this.an.getByteFrequencyData(this.buf);
+    const hz = ac().sampleRate / this.an.fftSize, hi = Math.max(2, Math.floor(160 / hz));
+    let e = 0; for (let i = 1; i <= hi; i++) e += this.buf[i]; e /= hi;
+    this.avg = this.avg ? this.avg * 0.94 + e * 0.06 : e;
+    if (e > this.avg * 1.18 && e > 50 && now - this.last > 0.28) { this.last = now; this.lastBeatAt = now; this.pulse = 1; }
+  }
+};
+function drawBeams(x, W, H, t) {
+  const p = Beat.pulse, e = (G.hype || 0) / 100;
+  if (p < 0.03 && e < 0.6) return;
+  x.save(); x.fillStyle = themeColor();
+  for (let k = 0; k < 4; k++) {
+    const sx = W * (0.12 + k * 0.25), ang = Math.sin(t * 0.7 + k * 1.9) * 0.55, len = H * 1.3, spread = 0.13;
+    x.globalAlpha = 0.05 + p * 0.13 + (e > 0.6 ? (e - 0.6) * 0.15 : 0);
+    x.beginPath(); x.moveTo(sx, -4);
+    x.lineTo(sx + Math.sin(ang - spread) * len, Math.cos(ang - spread) * len);
+    x.lineTo(sx + Math.sin(ang + spread) * len, Math.cos(ang + spread) * len); x.closePath(); x.fill();
+  }
+  x.restore();
+}
+
+/* ---------------- Ranking geral ---------------- */
+let rkTab = 'top';
+function renderRanking() {
+  $$('#rkTabs [data-rk]').forEach(b => b.setAttribute('aria-pressed', b.dataset.rk === rkTab));
+  const h = store.get('history', []); const list = $('#rkList');
+  const row = (i, who, sub, nt) => `<li class="${i < 3 ? 'top' : ''}"><div class="rk-row" style="width:100%"><span class="pos">${i + 1}º</span><span class="who">${esc(who)}<small>${esc(sub)}</small></span><span class="nt">${nt}</span></div></li>`;
+  if (!h.length) { list.innerHTML = '<li><span>Ninguém cantou ainda. A primeira nota entra aqui.</span></li>'; return; }
+  if (rkTab === 'top') {
+    list.innerHTML = [...h].sort((a, b) => b.nota - a.nota || a.at - b.at).slice(0, 15).map((r, i) => row(i, r.name, `${r.song}${r.artist ? ' · ' + r.artist : ''} · ${new Date(r.at).toLocaleDateString('pt-BR')}`, r.nota)).join('');
+  } else if (rkTab === 'singers') {
+    const m = {}; h.forEach(r => { const k = r.name.trim().toLowerCase(); (m[k] = m[k] || { name: r.name, n: 0, sum: 0, best: 0 }); m[k].n++; m[k].sum += r.nota; m[k].best = Math.max(m[k].best, r.nota); });
+    list.innerHTML = Object.values(m).sort((a, b) => b.sum / b.n - a.sum / a.n).map((r, i) => row(i, r.name, `${r.n} ${r.n === 1 ? 'música' : 'músicas'} · recorde ${r.best}`, Math.round(r.sum / r.n))).join('');
+  } else {
+    const m = {}; h.forEach(r => { const k = r.song.toLowerCase(); (m[k] = m[k] || { song: r.song, artist: r.artist, n: 0, best: -1, who: '' }); m[k].n++; if (r.nota > m[k].best) { m[k].best = r.nota; m[k].who = r.name; } });
+    list.innerHTML = Object.values(m).sort((a, b) => b.n - a.n || b.best - a.best).map((r, i) => row(i, r.song, `${r.artist ? r.artist + ' · ' : ''}cantada ${r.n}x · recorde de ${r.who}`, r.best)).join('');
+  }
+}
+function openRanking() { renderRanking(); openSheet('#rankSheet'); }
+$('#btnRanking').addEventListener('click', openRanking);
+$('#btnRank2').addEventListener('click', openRanking);
+$('#rkTabs').addEventListener('click', e => { const b = e.target.closest('[data-rk]'); if (b) { rkTab = b.dataset.rk; renderRanking(); } });
+$('#rkClear').addEventListener('click', e => {
+  const b = e.currentTarget;
+  if (b.dataset.armed) { store.set('history', []); renderRanking(); toast('Ranking zerado.'); delete b.dataset.armed; b.textContent = 'Zerar ranking'; return; }
+  b.dataset.armed = '1'; b.textContent = 'Toque de novo para zerar'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Zerar ranking'; }, 3500);
+});
+$('#whoName').addEventListener('input', e => { settings.name = e.target.value.trim() || 'Você'; saveSettings(); });
 
 /* ---------------- Equalizador decorativo ---------------- */
 (function eq() {
