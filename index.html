@@ -90,7 +90,7 @@ h2 em{font-style:normal;box-shadow:inset 0 -.16em 0 var(--yellow)}
 @keyframes eq{from{transform:scaleX(var(--a))}to{transform:scaleX(var(--b))}}
 
 /* ---------- palco de abertura ---------- */
-.stagehero{position:relative;min-height:clamp(380px,56vw,760px);display:flex;flex-direction:column;justify-content:flex-start;gap:14px;padding-top:clamp(28px,5vw,64px);overflow:hidden;border:1px solid var(--charcoal)}
+.stagehero{position:relative;min-height:clamp(380px,62vw,820px);display:flex;flex-direction:column;justify-content:flex-start;gap:14px;padding-top:clamp(28px,5vw,64px);overflow:hidden;border:1px solid var(--charcoal)}
 .stagehero canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
 .stagehero > *:not(canvas){position:relative;z-index:1;padding-inline:clamp(16px,3vw,32px)}
 .live{display:inline-flex;align-items:center;gap:8px;font:400 12px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--black);background:var(--yellow);border-radius:900px;padding:8px 14px;align-self:flex-start;margin-left:clamp(16px,3vw,32px)}
@@ -752,15 +752,29 @@ const Mic = {
     showLatency();
   },
   // só conta como voz o que fica bem acima do barulho de fundo (música vazando da caixa, ventilador…)
-  rmsHist: [], floor: 0,
+  rmsHist: [], floor: 0, calUntil: 0, calMic: [], calTab: [], calFloor: 0, leakK: 0,
+  // 3 s de silêncio com a música tocando: mede quanto da caixa vaza no microfone
+  calibrate(ms = 3000) { this.calUntil = performance.now() + ms; this.calMic = []; this.calTab = []; },
+  calibrating() { return performance.now() < this.calUntil; },
   pitch(r) {
     if (!r) return null;
     if (!this.external) {
-      this.rmsHist.push(r.rms); if (this.rmsHist.length > 180) this.rmsHist.shift();
-      if (this.rmsHist.length % 15 === 0) { const srt = [...this.rmsHist].sort((a, b) => a - b); this.floor = srt[Math.floor(srt.length * 0.3)] || 0; }
-      if (r.rms < Math.max(0.01, this.floor * 2.4)) return null;
+      const tr = Tab.rms();
+      const q = (arr, k) => { const srt = [...arr].sort((x, y) => x - y); return srt[Math.floor(srt.length * k)] || 0; };
+      if (tr > 0.002) { this.ratioHist = this.ratioHist || []; this.ratioHist.push(r.rms / tr); if (this.ratioHist.length > 450) this.ratioHist.shift(); }
+      this.rmsHist.push(r.rms); if (this.rmsHist.length > 360) this.rmsHist.shift();
+      if (this.calibrating()) { this.calMic.push(r.rms); return null; }
+      if (this.calMic.length) { this.calFloor = Math.min(0.04, q(this.calMic, 0.3)); this.calMic = []; }
+      // estatística de mínimos: os momentos mais baixos (pausas) mostram o quanto da música vaza
+      if (this.rmsHist.length % 15 === 0) {
+        this.floor = q(this.rmsHist, 0.1);
+        this.leakK = this.ratioHist && this.ratioHist.length > 30 ? q(this.ratioHist, 0.1) : 0;
+        this.calFloor *= 0.995; // a calibração vale mais no começo e vai cedendo para a medida contínua
+      }
+      const thr = Math.max(0.012, this.floor * 2.6, this.calFloor * 2.4, this.leakK && tr ? this.leakK * tr * 2.6 : 0);
+      if (r.rms < thr) return null;
     }
-    return r.f > 0 && r.clarity > 0.75 ? ftom(r.f) : null;
+    return r.f > 0 && r.clarity > 0.78 ? ftom(r.f) : null;
   },
   read() { if (!this.an) return null; this.an.getFloatTimeDomainData(this.buf); return detectPitch(this.buf, ac().sampleRate); },
   stop() {
@@ -1070,6 +1084,7 @@ function startSong() {
     latency: auto ? 0.02 : (settings.latency / 1000 + (c.outputLatency || 0) + (c.baseLatency || 0) + 0.04)
   });
   G.hasMic = !!Mic.an;
+  if (G.hasMic && !auto) startCalibration();
   if (!G.hasMic) { G.mode = 'livre'; toast('Sem microfone: você canta, mas a nota fica de fora.'); }
   $('#modeTag').textContent = G.auto ? 'Modo show · voz original' : G.mode === 'pitch' ? 'Afinação · ' + ({ facil: 'fácil', normal: 'normal', dificil: 'difícil' }[settings.diff]) : G.mode === 'ritmo' ? 'Modo ritmo' : 'Sem microfone';
   $$('.sheet').forEach(s => s.hidden = true);
@@ -1357,6 +1372,8 @@ function drawCrowd(t) {
   if (grainPat) { x.fillStyle = grainPat; x.fillRect(0, band, W, H); }
   const e = G.hype / 100, bps = (G.meta.bpm || 112) / 60;
   const style = crowdStyle(G.themeKey), act = Beat.active();
+  const vid = CrowdVid.get(style);
+  if (vid) { x.fillStyle = COL.ink; x.fillRect(0, 0, W, H); drawVidBand(x, vid, W, H, 0.44, 0.86); return; }
   const ci = CrowdImg.get(style);
   if (ci) { x.fillStyle = COL.ink; x.fillRect(0, 0, W, H); const ph = act ? (performance.now() / 1000 - Beat.lastBeatAt) * bps : t * bps; drawCrowdImg(x, ci, W, H, ci.bandY + 0.02, ph, act ? Beat.pulse : Math.pow(1 - (t * bps) % 1, 3), e, t, false, 0.86); return; }
   for (const p of G.people) {
@@ -1577,7 +1594,7 @@ async function startYt() {
   G.yt = new YtSource(v.id, title => {
     v.title = title; $('#stTitle').textContent = title; G.meta.title = title; if (played) rememberYt(v);
     findSongInfo(title).then(info => { if (info) applyInfo(info); });
-  }, () => { played = true; rememberYt(v); });
+  }, () => { played = true; rememberYt(v); if (G.hasMic) startCalibration(); });
   Object.assign(G, {
     meta: { title: v.title || 'Vídeo do YouTube', artist: 'YouTube', duration: 0 }, id: 'yt:' + v.id,
     running: true, paused: false, ended: false, auto: false, free: true, mode: 'livre',
@@ -1737,6 +1754,7 @@ const Tab = {
     this.src.connect(this.an); this.buf = new Float32Array(this.an.frequencyBinCount);
     this.reset(); return true;
   },
+  rms() { if (!this.an) return 0; if (!this.tb) this.tb = new Float32Array(2048); this.an.getFloatTimeDomainData(this.tb); let s = 0; for (let i = 0; i < this.tb.length; i++) s += this.tb[i] * this.tb[i]; return Math.sqrt(s / this.tb.length); },
   reset() { this.longC = new Float32Array(12); this.shortC = new Float32Array(12); this.n = 0; this.key = null; this.scale = null; },
   update() {
     if (!this.an) return;
@@ -1831,6 +1849,13 @@ registerProcessor('palco-autotune', PalcoAT);`;
 async function loadAutotune(c, po) {
   if (!c.__at) { const url = URL.createObjectURL(new Blob([AT_SRC], { type: 'application/javascript' })); await c.audioWorklet.addModule(url); c.__at = true; }
   return new AudioWorkletNode(c, 'palco-autotune', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], processorOptions: po || {} });
+}
+
+
+function startCalibration() {
+  Mic.calibrate(3000);
+  const b = $('#announce'); b.textContent = 'Silêncio: calibrando'; b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
+  toast('Fica 3 segundos em silêncio: estou medindo o som da música no microfone.', 3200);
 }
 
 /* ---------------- Retorno do microfone ---------------- */
@@ -2157,6 +2182,35 @@ function crowdFlashes(x, c, ox, oy, dw, sc, e, t) {
   });
 }
 
+
+const CROWD_VIDS = { pop: 'img/plateia-pop.mp4' };
+const CrowdVid = {
+  v: {},
+  get(style) {
+    const src = CROWD_VIDS[style]; if (!src) return null;
+    let v = this.v[style];
+    if (!v) { v = document.createElement('video'); v.src = src; v.muted = true; v.loop = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto'; this.v[style] = v; }
+    Object.entries(this.v).forEach(([k, o]) => { if (k !== style && !o.paused) o.pause(); });
+    if (v.paused) v.play().catch(() => {});
+    return v.readyState >= 2 && v.videoWidth ? v : null;
+  }
+};
+// vídeo na faixa do palco: cabeças e braços, repetido lado a lado
+function drawVidBand(x, v, W, H, sy0, sy1) {
+  const vw = v.videoWidth, vh = v.videoHeight, sc = H / ((sy1 - sy0) * vh), dw = vw * sc;
+  for (let k = 0, ox = 0; ox < W; k++, ox += dw) {
+    x.save(); if (k % 2) { x.translate(ox + dw, 0); x.scale(-1, 1); } else x.translate(ox, 0);
+    x.drawImage(v, 0, sy0 * vh, vw, (sy1 - sy0) * vh, 0, 0, dw, H); x.restore();
+  }
+}
+// vídeo no topo da página: largura toda, alinhado embaixo, sem o pé da imagem
+function drawVidHero(x, v, W, H) {
+  const vw = v.videoWidth, vh = v.videoHeight, sy1 = 0.8, sc = W / vw, dh = vh * sy1 * sc, oy = H - dh;
+  x.drawImage(v, 0, 0, vw, vh * sy1, 0, oy, W, dh);
+  const gy = oy + dh * 0.28, gr = x.createLinearGradient(0, Math.max(0, oy), 0, gy), ink = COL.ink || '#19181a';
+  gr.addColorStop(0, ink); gr.addColorStop(1, 'rgba(25,24,26,0)'); x.fillStyle = gr; x.fillRect(0, 0, W, gy);
+}
+
 /* ---------------- Ranking geral ---------------- */
 let rkTab = 'top';
 function renderRanking() {
@@ -2230,6 +2284,8 @@ const Hero = {
     const st = CROWD_STYLES[Math.floor(t / 7) % CROWD_STYLES.length];
     if (st !== this.style) { this.style = st; const lab = $('#heroStyle'); if (lab) lab.textContent = 'Plateia: ' + CROWD_NAMES[st]; }
     const Y = COL.yellow || '#f0e226', beat = (t * 112 / 60) % 1, pulse = Math.pow(1 - beat, 3), e = 0.55 + 0.45 * Math.sin(t * 0.35);
+    const vid = CrowdVid.get(st);
+    if (vid) { x.fillStyle = COL.ink || '#19181a'; x.fillRect(0, 0, W, H); drawVidHero(x, vid, W, H); return; }
     const ci = CrowdImg.get(st);
     if (ci) { x.fillStyle = COL.ink || '#19181a'; x.fillRect(0, 0, W, H); drawCrowdImg(x, ci, W, H, 0, t * 112 / 60, pulse, e, t, true); return; }
     x.fillStyle = COL.ink || '#19181a'; x.fillRect(0, 0, W, H);
