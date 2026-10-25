@@ -2019,10 +2019,10 @@ function drawBeams(x, W, H, t) {
 
 /* ---------------- Plateia dançando (por estilo) ---------------- */
 const CROWD_STYLES = ['pop', 'sertanejo', 'pagode', 'indie', 'rock', 'funk'];
-const CROWD_NAMES = { pop: 'Pop', sertanejo: 'Sertanejo', pagode: 'Pagode', indie: 'Indie', rock: 'Rock', funk: 'Funk' };
+const CROWD_NAMES = { gospel: 'Gospel', pop: 'Pop', sertanejo: 'Sertanejo', pagode: 'Pagode', indie: 'Indie', rock: 'Rock', funk: 'Funk' };
 const STYLE_THEME = { pop: 'pop', sertanejo: 'sertanejo', pagode: 'samba', indie: 'indie', rock: 'rock', funk: 'funk' };
-function crowdStyle(themeKey) { return { sertanejo: 'sertanejo', samba: 'pagode', indie: 'indie', rock: 'rock', funk: 'funk', reggae: 'pagode' }[themeKey] || 'pop'; }
-const DANCE = { pop: [10, 5], sertanejo: [6, 7], pagode: [5, 8], indie: [4, 3], rock: [13, 2], funk: [14, 4] }; // [pulo, ginga lateral]
+function crowdStyle(themeKey) { return { gospel: 'gospel', sertanejo: 'sertanejo', samba: 'pagode', indie: 'indie', rock: 'rock', funk: 'funk', reggae: 'pagode' }[themeKey] || 'pop'; }
+const DANCE = { gospel: [3, 5], pop: [10, 5], sertanejo: [6, 7], pagode: [5, 8], indie: [4, 3], rock: [13, 2], funk: [14, 4] }; // [pulo, ginga lateral]
 function drawFan(x, p, base, s, e, t, ph, jump, style, bottom) {
   const amp = 0.35 + 0.65 * e, [jumpK, swayK] = DANCE[style] || DANCE.pop;
   const sway = Math.sin(ph * Math.PI) * amp;
@@ -2045,6 +2045,13 @@ function drawFan(x, p, base, s, e, t, ph, jump, style, bottom) {
   if (dancing) {
     const beat2 = Math.sin(ph * Math.PI * 2);
     if (style === 'pop') { [-1, 1].forEach(sd => arm(sd, -Math.PI / 2 + sd * 0.3 + sway * 0.45, 30)); }
+    else if (style === 'gospel') {
+      const slow = Math.sin(ph * Math.PI * 0.5 + p.ph);
+      if (p.acc < 0.55) [-1, 1].forEach(sd => arm(sd, -Math.PI / 2 + sd * 0.5 + slow * 0.18, 31)); // braços erguidos, mãos abertas
+      else if (p.acc < 0.72) [-1, 1].forEach(sd => arm(sd, 0, 0, [sd * 8, 9, -sd * 7, -9])); // mãos juntas no peito
+      else if (p.acc < 0.95) { const clap = Math.abs(Math.cos(ph * Math.PI)); [-1, 1].forEach(sd => arm(sd, 0, 0, [sd * 9, 6, -sd * (5 + 7 * clap), -12])); } // palmas
+      else arm(1, -Math.PI / 2 + 0.15 + slow * 0.1, 32); // bandeira
+    }
     else if (style === 'funk') { [-1, 1].forEach(sd => arm(sd, -Math.PI / 2 + sd * 0.45 + sd * Math.sin(ph * Math.PI) * 0.55, 30)); }
     else if (style === 'rock') { const len = 26 + 6 * jump; arm(1, -Math.PI / 2 + 0.22, len); if (p.acc < 0.4) arm(-1, -Math.PI / 2 - 0.22, len); }
     else if (style === 'indie') { arm(1, -Math.PI / 2 + 0.25 + beat2 * 0.12, 28); }
@@ -2084,6 +2091,17 @@ function drawFan(x, p, base, s, e, t, ph, jump, style, bottom) {
   x.restore();
   // objetos nas mãos
   hands.forEach(([ex, ey, ang, side]) => {
+    if (style === 'gospel') {
+      if (p.acc < 0.55) { x.lineWidth = 2 * s; for (let f = -2; f <= 2; f++) { const a = ang + f * 0.22; x.beginPath(); x.moveTo(ex, ey); x.lineTo(ex + Math.cos(a) * 7 * s, ey + Math.sin(a) * 7 * s); x.stroke(); } }
+      else if (p.acc >= 0.95) {
+        const tx = ex + Math.cos(ang) * 26 * s, ty = ey + Math.sin(ang) * 26 * s; x.lineWidth = 2.4 * s;
+        x.beginPath(); x.moveTo(ex, ey); x.lineTo(tx, ty); x.stroke();
+        const wv = Math.sin(t * 4 + p.ph), L = 22 * s;
+        x.beginPath(); x.moveTo(tx, ty); x.quadraticCurveTo(tx + L * 0.5, ty - 6 * s + wv * 6 * s, tx + L, ty + wv * 3 * s);
+        x.lineTo(tx + L, ty + 12 * s + wv * 3 * s); x.quadraticCurveTo(tx + L * 0.5, ty + 7 * s - wv * 5 * s, tx, ty + 12 * s); x.closePath(); x.fill();
+      }
+      return;
+    }
     if (style === 'rock' && side === 1) { x.lineWidth = 2.6 * s; x.beginPath(); x.moveTo(ex - 2 * s, ey); x.lineTo(ex - 3.6 * s, ey - 7 * s); x.moveTo(ex + 2 * s, ey); x.lineTo(ex + 3.6 * s, ey - 7 * s); x.stroke(); }
     else if (style === 'pagode' && side === 1 && p.acc > 0.62) { x.lineWidth = 2.6 * s; x.beginPath(); x.arc(ex, ey - 8 * s + Math.sin(t * 14) * 1.5 * s, 8 * s, 0, Math.PI * 2); x.stroke(); }
     else if (style === 'sertanejo' && side === 1 && p.acc > 0.75) { x.beginPath(); x.ellipse(ex, ey - 4 * s, 10 * s, 3.2 * s, Math.sin(t * 6 + p.ph) * 0.5, 0, Math.PI * 2); x.fill(); }
