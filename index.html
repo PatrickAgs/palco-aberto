@@ -90,7 +90,7 @@ h2 em{font-style:normal;box-shadow:inset 0 -.16em 0 var(--yellow)}
 @keyframes eq{from{transform:scaleX(var(--a))}to{transform:scaleX(var(--b))}}
 
 /* ---------- palco de abertura ---------- */
-.stagehero{position:relative;min-height:clamp(380px,50vw,640px);display:flex;flex-direction:column;justify-content:flex-start;gap:14px;padding-top:clamp(28px,5vw,64px);overflow:hidden;border:1px solid var(--charcoal)}
+.stagehero{position:relative;min-height:clamp(380px,56vw,760px);display:flex;flex-direction:column;justify-content:flex-start;gap:14px;padding-top:clamp(28px,5vw,64px);overflow:hidden;border:1px solid var(--charcoal)}
 .stagehero canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
 .stagehero > *:not(canvas){position:relative;z-index:1;padding-inline:clamp(16px,3vw,32px)}
 .live{display:inline-flex;align-items:center;gap:8px;font:400 12px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--black);background:var(--yellow);border-radius:900px;padding:8px 14px;align-self:flex-start;margin-left:clamp(16px,3vw,32px)}
@@ -377,6 +377,8 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
       <label class="check"><input type="checkbox" class="optMon"> Ouvir minha voz junto com a música</label>
       <div class="field"><label class="label">Volume da voz <output class="monVolOut">80%</output></label><input type="range" class="monVol" min="0" max="100" step="5" aria-label="Volume da voz"></div>
       <div class="field"><label class="label">Eco de karaokê <output class="monFxOut">20%</output></label><input type="range" class="monFx" min="0" max="100" step="5" aria-label="Eco de karaokê"></div>
+      <div class="field"><span class="label">Melhorar a voz</span><div class="seg vfx"><button class="pill sm" type="button" data-vfx="natural">Natural</button><button class="pill sm" type="button" data-vfx="estudio">Estúdio</button><button class="pill sm" type="button" data-vfx="show">Show</button></div></div>
+      <div class="field"><span class="label">Autotune</span><div class="seg atn"><button class="pill sm" type="button" data-atn="off">Desligado</button><button class="pill sm" type="button" data-atn="leve">Leve</button><button class="pill sm" type="button" data-atn="robo">Robô</button></div></div>
       <label class="check"><input type="checkbox" class="optNs"> Supressor de ruído com IA (tira barulho de fundo, ventilador, teclado)</label>
       <p class="micmsg monLat" style="grid-column:auto"></p>
     </div>
@@ -489,6 +491,8 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
       <label class="check"><input type="checkbox" class="optMon"> Ouvir minha voz junto com a música</label>
       <div class="field"><label class="label">Volume da voz <output class="monVolOut">80%</output></label><input type="range" class="monVol" min="0" max="100" step="5" aria-label="Volume da voz"></div>
       <div class="field"><label class="label">Eco de karaokê <output class="monFxOut">20%</output></label><input type="range" class="monFx" min="0" max="100" step="5" aria-label="Eco de karaokê"></div>
+      <div class="field"><span class="label">Melhorar a voz</span><div class="seg vfx"><button class="pill sm" type="button" data-vfx="natural">Natural</button><button class="pill sm" type="button" data-vfx="estudio">Estúdio</button><button class="pill sm" type="button" data-vfx="show">Show</button></div></div>
+      <div class="field"><span class="label">Autotune</span><div class="seg atn"><button class="pill sm" type="button" data-atn="off">Desligado</button><button class="pill sm" type="button" data-atn="leve">Leve</button><button class="pill sm" type="button" data-atn="robo">Robô</button></div></div>
       <label class="check"><input type="checkbox" class="optNs"> Supressor de ruído com IA (tira barulho de fundo, ventilador, teclado)</label>
       <p class="micmsg monLat" style="grid-column:auto"></p>
     </div>
@@ -555,7 +559,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('palco:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('palco:' + k, JSON.stringify(v)); } catch (e) {} }
 };
-const settings = Object.assign({ name: 'Você', latency: 0, sfx: true, feed: true, diff: 'normal', guide: 30, autoSing: false, ytKey: '', monitor: false, monVol: 80, monFx: 20, tabCompare: true, denoise: true }, store.get('settings', {}));
+const settings = Object.assign({ name: 'Você', latency: 0, sfx: true, feed: true, diff: 'normal', guide: 30, autoSing: false, ytKey: '', monitor: false, monVol: 80, monFx: 20, tabCompare: true, denoise: true, voiceFx: 'estudio', autotune: 'off' }, store.get('settings', {}));
 const saveSettings = () => store.set('settings', settings);
 const TOL = { facil: 1.6, normal: 1.0, dificil: 0.6 };
 
@@ -705,14 +709,46 @@ const Mic = {
       const len = Math.floor(c.sampleRate * 1.6), ir = c.createBuffer(2, len, c.sampleRate);
       for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 4); }
       const conv = c.createConvolver(); conv.buffer = ir;
-      // caminho direto, sem compressor nem eco repetido: a voz sai na hora + reverberação de sala
-      const out = c.createGain(), wet = c.createGain();
-      this.clean.connect(out); this.clean.connect(conv); conv.connect(wet); wet.connect(out); out.connect(c.destination);
-      this.mon = { out, wet, conv, from: this.clean };
+      // dois caminhos: natural (direto) e tratado (EQ de voz + compressor + dobra)
+      const out = c.createGain(), wet = c.createGain(), nat = c.createGain(), fx = c.createGain();
+      const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 95;
+      const mud = c.createBiquadFilter(); mud.type = 'peaking'; mud.frequency.value = 320; mud.Q.value = 1.1; mud.gain.value = -3.5;
+      const pres = c.createBiquadFilter(); pres.type = 'peaking'; pres.frequency.value = 3800; pres.Q.value = 0.9; pres.gain.value = 4.5;
+      const air = c.createBiquadFilter(); air.type = 'highshelf'; air.frequency.value = 10000; air.gain.value = 3.5;
+      const comp = c.createDynamicsCompressor(); comp.threshold.value = -26; comp.ratio.value = 3.5; comp.knee.value = 8; comp.attack.value = 0.004; comp.release.value = 0.18;
+      const mk = c.createGain(); mk.gain.value = 1.5;
+      const pre = c.createGain(), dir = c.createGain(), atg = c.createGain(); atg.gain.value = 0;
+      this.clean.connect(dir); dir.connect(pre); atg.connect(pre);
+      pre.connect(nat); nat.connect(out);
+      pre.connect(hp); hp.connect(mud); mud.connect(pres); pres.connect(air); air.connect(comp); comp.connect(mk); mk.connect(fx); fx.connect(out);
+      // dobra de voz (dois atrasos curtos que oscilam um pouco)
+      const dbl = c.createGain(); dbl.gain.value = 0;
+      [[0.019, 0.27], [0.031, 0.21]].forEach(([dt, rate], i) => {
+        const d = c.createDelay(0.1); d.delayTime.value = dt; const l = c.createOscillator(), lg = c.createGain();
+        l.frequency.value = rate; lg.gain.value = 0.0022; l.connect(lg); lg.connect(d.delayTime); l.start();
+        const pan = c.createStereoPanner ? c.createStereoPanner() : null; const g = c.createGain(); g.gain.value = 0.42;
+        mk.connect(d); d.connect(g); if (pan) { pan.pan.value = i ? 0.6 : -0.6; g.connect(pan); pan.connect(dbl); } else g.connect(dbl);
+      });
+      dbl.connect(out);
+      mk.connect(conv); conv.connect(wet); wet.connect(out); out.connect(c.destination);
+      this.mon = { out, wet, conv, nat, fx, dbl, dir, atg, from: this.clean };
     }
     const on = settings.monitor && !this.external;
     this.mon.out.gain.setTargetAtTime(on ? (settings.monVol / 100) * 1.6 : 0, c.currentTime, 0.03);
-    this.mon.wet.gain.setTargetAtTime((settings.monFx / 100) * 0.7, c.currentTime, 0.03);
+    const vf = settings.voiceFx, T = c.currentTime;
+    const atOn = settings.autotune !== 'off' && on;
+    if (atOn && !this.at && !this.atLoading) {
+      this.atLoading = true;
+      loadAutotune(c, { amount: 1, speed: settings.autotune === 'robo' ? 1 : 0.22, scale: Tab.scale ? [...Tab.scale] : null }).then(node => { this.atLoading = false; if (!this.mon || !this.clean) return; this.at = node; this.clean.connect(node); node.connect(this.mon.atg); this.applyMonitor(); })
+        .catch(e => { this.atLoading = false; console.warn(e); toast('O autotune não carregou neste navegador.'); });
+    }
+    if (this.at) this.at.port.postMessage({ amount: atOn ? 1 : 0, speed: settings.autotune === 'robo' ? 1 : 0.22, scale: Tab.scale ? [...Tab.scale] : null });
+    this.mon.dir.gain.setTargetAtTime(atOn && this.at ? 0 : 1, T, 0.02);
+    this.mon.atg.gain.setTargetAtTime(atOn && this.at ? 1 : 0, T, 0.02);
+    this.mon.nat.gain.setTargetAtTime(vf === 'natural' ? 1 : 0, T, 0.02);
+    this.mon.fx.gain.setTargetAtTime(vf === 'natural' ? 0 : 1, T, 0.02);
+    this.mon.dbl.gain.setTargetAtTime(vf === 'show' ? 1 : 0, T, 0.05);
+    this.mon.wet.gain.setTargetAtTime((settings.monFx / 100) * (vf === 'show' ? 1.1 : 0.7), T, 0.03);
     showLatency();
   },
   // só conta como voz o que fica bem acima do barulho de fundo (música vazando da caixa, ventilador…)
@@ -728,7 +764,8 @@ const Mic = {
   },
   read() { if (!this.an) return null; this.an.getFloatTimeDomainData(this.buf); return detectPitch(this.buf, ac().sampleRate); },
   stop() {
-    if (this.mon) { try { this.mon.from.disconnect(this.mon.out); this.mon.from.disconnect(this.mon.conv); this.mon.out.disconnect(); } catch (e) {} this.mon = null; }
+    if (this.at) { try { this.clean && this.clean.disconnect(this.at); this.at.disconnect(); } catch (e) {} this.at = null; }
+    if (this.mon) { try { this.mon.from.disconnect(); this.mon.out.disconnect(); } catch (e) {} this.mon = null; if (this.an && this.hp && this.node) { try { this.node.connect(this.hp); } catch (e) {} } }
     if (this.ns) { try { this.src.disconnect(this.ns); this.ns.port.postMessage('destroy'); this.ns.disconnect(); } catch (e) {} this.ns = null; }
     this.clean = null; this.detach(); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); this.stream = null; this.src = null; this.external = false; }
 };
@@ -1320,6 +1357,8 @@ function drawCrowd(t) {
   if (grainPat) { x.fillStyle = grainPat; x.fillRect(0, band, W, H); }
   const e = G.hype / 100, bps = (G.meta.bpm || 112) / 60;
   const style = crowdStyle(G.themeKey), act = Beat.active();
+  const ci = CrowdImg.get(style);
+  if (ci) { x.fillStyle = COL.ink; x.fillRect(0, 0, W, H); const ph = act ? (performance.now() / 1000 - Beat.lastBeatAt) * bps : t * bps; drawCrowdImg(x, ci, W, H, Math.max(0, ci.bandY - 0.04), ph, act ? Beat.pulse : Math.pow(1 - (t * bps) % 1, 3), e, t); return; }
   for (const p of G.people) {
     const base = p.row ? H * 0.78 : H + 6, s = p.s * Math.min(1.25, H / 110);
     const ph = t * bps + p.ph * 0.04, jump = act ? Beat.pulse * (0.6 + 0.4 * Math.sin(p.ph * 3)) : Math.max(0, Math.sin(ph * Math.PI * 2));
@@ -1722,7 +1761,7 @@ const Tab = {
     if (best.c < 0.45) return;
     const steps = best.minor ? [0, 2, 3, 5, 7, 8, 10, 11] : [0, 2, 4, 5, 7, 9, 11];
     this.scale = new Set(steps.map(s => (s + best.r) % 12));
-    this.key = NOTES[best.r] + (best.minor ? ' menor' : ' maior');
+    const nk = NOTES[best.r] + (best.minor ? ' menor' : ' maior'); if (nk !== this.key) { this.key = nk; Mic.at && Mic.applyMonitor(); }
   },
   // true = combina com a música, false = fora do tom/acorde, null = ainda não sei
   fits(pc) {
@@ -1738,6 +1777,61 @@ const Tab = {
     this.stream = this.src = this.an = null;
   }
 };
+
+
+/* ---------------- Autotune (corretor de afinação em tempo real) ---------------- */
+const AT_SRC = `
+class PalcoAT extends AudioWorkletProcessor {
+  constructor(opt) {
+    super();
+    const po = (opt && opt.processorOptions) || {};
+    this.B = 8192; this.buf = new Float32Array(this.B); this.w = 0;
+    this.W = Math.round(sampleRate * 0.03); this.p = 0; this.ratio = 1; this.cur = 0;
+    this.D = 4; this.dsr = sampleRate / this.D; this.db = new Float32Array(1024); this.dw = 0; this.acc = 0; this.cnt = 0; this.tick = 0;
+    this.x = new Float32Array(352); this.d = new Float32Array(400);
+    this.amount = po.amount || 0; this.speed = po.speed || 0.22; this.scale = po.scale || null;
+    this.port.onmessage = e => { const m = e.data; this.amount = m.amount; this.speed = m.speed; this.scale = m.scale; };
+  }
+  tap(dl) { let r = this.w - dl; while (r < 0) r += this.B; const i = Math.floor(r), f = r - i, m = this.B - 1; const a = this.buf[i & m], b = this.buf[(i + 1) & m]; return a + (b - a) * f; }
+  detect() {
+    const N = 352, x = this.x; let rms = 0;
+    for (let i = 0; i < N; i++) { const v = this.db[(this.dw - N + i + 1024) & 1023]; x[i] = v; rms += v * v; }
+    if (Math.sqrt(rms / N) < 0.008) return 0;
+    const Wn = 176, minT = Math.floor(this.dsr / 1000), maxT = Math.min(N - Wn - 1, Math.floor(this.dsr / 75)), d = this.d;
+    let run = 0; d[0] = 1;
+    for (let t = 1; t <= maxT; t++) { let s = 0; for (let i = 0; i < Wn; i++) { const v = x[i] - x[i + t]; s += v * v; } run += s; d[t] = run ? s * t / run : 1; }
+    for (let t = minT; t <= maxT; t++) if (d[t] < 0.18) { while (t + 1 <= maxT && d[t + 1] < d[t]) t++; let bt = t; if (t > 1 && t < maxT) { const a = d[t - 1], b = d[t], c = d[t + 1], den = a + c - 2 * b; if (den) bt = t + (a - c) / (2 * den); } return this.dsr / bt; }
+    return 0;
+  }
+  process(inputs, outputs) {
+    const out = outputs[0][0]; if (!out) return true;
+    const inp = inputs[0] && inputs[0][0]; if (!inp) { out.fill(0); return true; }
+    const B = this.B, W = this.W;
+    for (let i = 0; i < inp.length; i++) {
+      const s = inp[i]; this.buf[this.w] = s; this.w = (this.w + 1) & (B - 1);
+      this.acc += s; if (++this.cnt === this.D) { this.db[this.dw] = this.acc / this.D; this.dw = (this.dw + 1) & 1023; this.acc = 0; this.cnt = 0; }
+      this.p -= (this.ratio - 1) / W; this.p -= Math.floor(this.p);
+      const p2 = (this.p + 0.5) % 1, g1 = Math.sin(Math.PI * this.p) ** 2;
+      out[i] = this.tap(this.p * W + 2) * g1 + this.tap(p2 * W + 2) * (1 - g1);
+    }
+    if (++this.tick % 2 === 0) {
+      const f = this.detect(); let target = 0;
+      if (f > 0 && this.amount > 0) {
+        const m = 69 + 12 * Math.log2(f / 440); let t = Math.round(m);
+        if (this.scale && this.scale.length) { let best = 1e9; const o = Math.floor(m / 12) * 12; for (let k = -1; k <= 1; k++) for (const pc of this.scale) { const cand = o + pc + 12 * k, dd = Math.abs(cand - m); if (dd < best) { best = dd; t = cand; } } }
+        target = (t - m) * this.amount;
+      }
+      this.cur += (target - this.cur) * (f > 0 ? this.speed : 0.15);
+      this.ratio = Math.pow(2, this.cur / 12);
+    }
+    return true;
+  }
+}
+registerProcessor('palco-autotune', PalcoAT);`;
+async function loadAutotune(c, po) {
+  if (!c.__at) { const url = URL.createObjectURL(new Blob([AT_SRC], { type: 'application/javascript' })); await c.audioWorklet.addModule(url); c.__at = true; }
+  return new AudioWorkletNode(c, 'palco-autotune', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], processorOptions: po || {} });
+}
 
 /* ---------------- Retorno do microfone ---------------- */
 
@@ -1765,6 +1859,8 @@ function syncMonUI() {
   $$('.monFx').forEach(i => i.value = settings.monFx); $$('.monFxOut').forEach(o => o.textContent = settings.monFx + '%');
   $$('.monbox').forEach(b => b.classList.toggle('off', !settings.monitor));
   $$('.optNs').forEach(i => i.checked = settings.denoise); showLatency();
+  $$('.vfx [data-vfx]').forEach(b => b.setAttribute('aria-pressed', b.dataset.vfx === settings.voiceFx));
+  $$('.atn [data-atn]').forEach(b => b.setAttribute('aria-pressed', b.dataset.atn === settings.autotune));
 }
 document.addEventListener('input', e => {
   const el = e.target;
@@ -1777,6 +1873,8 @@ document.addEventListener('input', e => {
   if ((el.classList.contains('optMon') || el.classList.contains('optNs')) && Mic.stream && !Mic.external) { Mic.stop(); Mic.start().then(ok => { if (ok && G.running) G.hasMic = true; }); }
   if (el.classList.contains('optMon') && settings.monitor) toast('Use fone de ouvido. Com caixa de som perto do microfone dá microfonia (aquele apito).', 5000);
 });
+document.addEventListener('click', e => { const b = e.target.closest('.atn [data-atn]'); if (!b) return; settings.autotune = b.dataset.atn; saveSettings(); syncMonUI(); if (settings.autotune !== 'off' && !settings.monitor) { settings.monitor = true; saveSettings(); syncMonUI(); toast('Liguei “Ouvir minha voz” para você escutar o autotune. Use fone.', 5000); } Mic.applyMonitor(); });
+document.addEventListener('click', e => { const b = e.target.closest('.vfx [data-vfx]'); if (!b) return; settings.voiceFx = b.dataset.vfx; saveSettings(); syncMonUI(); Mic.applyMonitor(); });
 syncMonUI();
 
 
@@ -1973,6 +2071,79 @@ function drawFan(x, p, base, s, e, t, ph, jump, style, bottom) {
   });
 }
 
+
+/* ---------------- Plateia em imagem animada (camadas) ---------------- */
+const CrowdImg = {
+  cache: {},
+  get(style) {
+    let c = this.cache[style];
+    if (c) return c.ready ? c : null;
+    c = this.cache[style] = { ready: false, flashes: [] };
+    const im = new Image();
+    im.onload = () => { try { this.prep(c, im); } catch (e) { console.warn(e); } };
+    im.src = 'img/plateia-' + style + '.jpg';
+    return null;
+  },
+  prep(c, im) {
+    const w = im.naturalWidth, h = im.naturalHeight;
+    const mk = () => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; return cv; };
+    const base = mk(), bx = base.getContext('2d'); bx.drawImage(im, 0, 0);
+    const d = bx.getImageData(0, 0, w, h).data;
+    // onde começa a faixa de luz (linha que fica clara)
+    let bandY = Math.round(h * 0.41);
+    for (let y = Math.round(h * 0.2); y < h * 0.6; y++) { let sum = 0; for (let x = 0; x < w; x += 8) { const i = (y * w + x) * 4; sum += d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11; } if (sum / (w / 8) > 95) { bandY = y; break; } }
+    const front = mk(), beams = mk(), fctx = front.getContext('2d'), bctx = beams.getContext('2d');
+    const fd = fctx.createImageData(w, h), bd = bctx.createImageData(w, h);
+    const fy = Math.round(h * 0.57);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4, r = d[i], g = d[i + 1], b = d[i + 2], lum = r * 0.3 + g * 0.59 + b * 0.11;
+      if (y >= fy && lum < 48) { fd.data[i] = r; fd.data[i + 1] = g; fd.data[i + 2] = b; fd.data[i + 3] = 255; }
+      if (y < bandY && lum > 38) { bd.data[i] = r; bd.data[i + 1] = g; bd.data[i + 2] = b; bd.data[i + 3] = Math.min(255, (lum - 30) * 4); }
+    }
+    fctx.putImageData(fd, 0, 0); bctx.putImageData(bd, 0, 0);
+    Object.assign(c, { base, front, beams, w, h, bandY: bandY / h, frontY: fy / h, ready: true });
+  }
+};
+CROWD_STYLES.forEach(st => CrowdImg.get(st));
+// desenha a plateia: sy0..1 = faixa da imagem a mostrar; ph = fase da batida; pulse = 0..1 na batida; e = empolgação 0..1
+function drawCrowdImg(x, c, W, H, sy0, ph, pulse, e, t, fitWidth) {
+  const srcH = (1 - sy0) * c.h; let sc = Math.max(W / c.w, H / srcH);
+  if (fitWidth && c.h * (W / c.w) <= H) sc = W / c.w;
+  const dw = c.w * sc, ox = (W - dw) / 2, oy = H - c.h * sc; // alinhado embaixo
+  x.drawImage(c.base, 0, sy0 * c.h, c.w, srcH, ox, oy + sy0 * c.h * sc, dw, srcH * sc);
+  const strip = Math.max(2, Math.round(6 / sc)), backA = (2 + 6 * e) , frontA = (3 + 11 * e) * (0.4 + 0.6 * pulse);
+  // fileira de trás: onda suave
+  const b0 = Math.max(sy0, c.bandY) * c.h, b1 = c.frontY * c.h + 40;
+  for (let sx = 0; sx < c.w; sx += strip) {
+    const off = -backA * Math.max(0, Math.sin(ph * Math.PI * 2 + sx / c.w * 11));
+    x.drawImage(c.base, sx, b0, strip, b1 - b0, ox + sx * sc, oy + b0 * sc + off, strip * sc + 0.6, (b1 - b0) * sc);
+  }
+  // fileira da frente: pulo na batida, cada trecho num tempo
+  const f0 = c.frontY * c.h;
+  for (let sx = 0; sx < c.w; sx += strip) {
+    const off = -frontA * Math.max(0, Math.sin(ph * Math.PI * 2 - sx / c.w * 7 + 1.3));
+    x.drawImage(c.front, sx, f0, strip, c.h - f0, ox + sx * sc, oy + f0 * sc + off, strip * sc + 0.6, (c.h - f0) * sc);
+  }
+  // luzes piscando na batida
+  if (sy0 < c.bandY) {
+    x.save(); x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.12 + 0.5 * pulse;
+    x.drawImage(c.beams, 0, sy0 * c.h, c.w, (c.bandY - sy0) * c.h, ox, oy + sy0 * c.h * sc, dw, (c.bandY - sy0) * c.h * sc);
+    x.restore();
+  }
+  // topo da imagem some no escuro (sem emenda)
+  if (oy > 0) { const gy = oy + c.bandY * c.h * sc * 0.7, gr = x.createLinearGradient(0, oy, 0, gy), ink = COL.ink || '#19181a'; gr.addColorStop(0, ink); gr.addColorStop(1, 'rgba(25,24,26,0)'); x.fillStyle = gr; x.fillRect(0, oy - 1, W, gy - oy + 1); }
+  // flashes de celular
+  if (Math.random() < 0.02 + 0.08 * e) c.flashes.push({ x: Math.random(), y: c.bandY + Math.random() * (c.frontY - c.bandY + 0.15), t0: t });
+  c.flashes = c.flashes.filter(f => t - f.t0 < 0.3);
+  c.flashes.forEach(f => {
+    const fx = ox + f.x * dw, fy = oy + f.y * c.h * sc, a = 1 - (t - f.t0) / 0.3, r = 26 * sc / 0.8;
+    if (fy < 0) return;
+    const g = x.createRadialGradient(fx, fy, 0, fx, fy, r);
+    g.addColorStop(0, `rgba(255,255,255,${0.95 * a})`); g.addColorStop(0.25, `rgba(255,255,255,${0.45 * a})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.fillRect(fx - r, fy - r, r * 2, r * 2);
+  });
+}
+
 /* ---------------- Ranking geral ---------------- */
 let rkTab = 'top';
 function renderRanking() {
@@ -2046,6 +2217,8 @@ const Hero = {
     const st = CROWD_STYLES[Math.floor(t / 7) % CROWD_STYLES.length];
     if (st !== this.style) { this.style = st; const lab = $('#heroStyle'); if (lab) lab.textContent = 'Plateia: ' + CROWD_NAMES[st]; }
     const Y = COL.yellow || '#f0e226', beat = (t * 112 / 60) % 1, pulse = Math.pow(1 - beat, 3), e = 0.55 + 0.45 * Math.sin(t * 0.35);
+    const ci = CrowdImg.get(st);
+    if (ci) { x.fillStyle = COL.ink || '#19181a'; x.fillRect(0, 0, W, H); drawCrowdImg(x, ci, W, H, 0, t * 112 / 60, pulse, e, t, true); return; }
     x.fillStyle = COL.ink || '#19181a'; x.fillRect(0, 0, W, H);
     x.save(); x.fillStyle = Y;
     for (let k = 0; k < 5; k++) {
