@@ -394,7 +394,7 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
       <button class="icon" type="button" data-close aria-label="Fechar">✕</button>
     </div>
     <div class="field">
-      <label class="label" for="whoName">Quem vai cantar?</label>
+      <label class="label" for="whoName">Quem vai cantar? (obrigatório, vai pro ranking)</label>
       <input type="text" id="whoName" maxlength="20" autocomplete="nickname" placeholder="Seu nome no ranking">
     </div>
     <div class="field">
@@ -514,13 +514,17 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
 <div class="sheet" id="rankSheet" hidden role="dialog" aria-modal="true" aria-labelledby="rkTitle">
   <div class="panel">
     <div class="panel-head"><h3 id="rkTitle">Ranking</h3><button class="icon" type="button" data-close aria-label="Fechar">✕</button></div>
+    <div class="seg" id="rkScope">
+      <button class="pill sm" type="button" data-sc="online">Geral (todo mundo)</button>
+      <button class="pill sm" type="button" data-sc="local">Este aparelho</button>
+    </div>
     <div class="seg" id="rkTabs">
       <button class="pill sm" type="button" data-rk="top">Melhores notas</button>
       <button class="pill sm" type="button" data-rk="singers">Cantores</button>
       <button class="pill sm" type="button" data-rk="songs">Músicas</button>
     </div>
     <ol class="rank" id="rkList"></ol>
-    <p class="sub" style="font-size:13px;line-height:1.4">O ranking fica salvo neste aparelho e neste navegador.</p>
+    <p class="sub" id="rkNote" style="font-size:13px;line-height:1.4"></p>
     <div class="actions"><button class="pill fill" type="button" data-close>Fechar</button><button class="pill ghost sm" type="button" id="rkClear">Zerar ranking</button></div>
   </div>
 </div>
@@ -651,6 +655,8 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
 
 <script>
 'use strict';
+const SB_URL = 'https://dlyaxfdadjpblxpmdaks.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRseWF4ZmRhZGpwYmx4cG1kYWtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2Mjk0NDcsImV4cCI6MjEwODIwNTQ0N30.eruc3KWOwo7qf4htB3QmJQP18KqxP8P27JHIC-FjTgU';
 /* =========================================================
    Palco Aberto · karaokê com IA
    ========================================================= */
@@ -1173,7 +1179,13 @@ function prepareGame(meta) {
 
 function setupMode(yt) { $('#fGuide').hidden = yt; $('#fAuto').hidden = yt; $('#fYtTip').hidden = !yt; $('#fTab').hidden = !yt || !Tab.supported(); $('#optTab').checked = settings.tabCompare; $('#fTabFx').hidden = !yt || !Tab.firefox(); }
 $('#optTab').addEventListener('change', e => { settings.tabCompare = e.target.checked; saveSettings(); });
+function needName() {
+  const el = $('#whoName'), n = el.value.trim().slice(0, 20);
+  if (!n) { if (!$('#setup').hidden) { el.focus(); el.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], 240); } else openSheet('#setup'); toast('Coloque o nome de quem vai cantar.'); return null; }
+  settings.name = n; saveSettings(); return n;
+}
 function startSong() {
+  if (!needName()) return;
   if (pending && pending.yt) return startYt();
   if (!pending || !pending.inst) return;
   stopMicTest();
@@ -1536,6 +1548,7 @@ function finish() {
   const nota = G.hasMic ? Math.round(clamp(G.score / 100, 0, 100)) : null;
   // ranking local
   let rank = store.get('rank:' + G.id, []); const entry = { name: G.auto ? 'Voz original' : settings.name, nota: nota ?? 0, at: Date.now() };
+  if (nota != null && !G.auto) Online.save({ name: entry.name, song: ((G.info && G.info.title) || G.meta.title || 'Música').slice(0, 120), artist: ((G.info && G.info.artist) || G.meta.artist || '').slice(0, 120), song_id: String(G.id || '').slice(0, 80), nota, mode: G.free ? 'youtube' : 'completo', room: Room.role === 'host' ? Room.code : '', device: myId });
   if (nota != null && !G.auto) { const h = store.get('history', []); h.push({ name: entry.name, song: (G.info && G.info.title) || G.meta.title, artist: (G.info && G.info.artist) || G.meta.artist || '', id: G.id, nota, at: entry.at }); store.set('history', h.slice(-500)); }
   Beat.detach(); $('#intro').hidden = true;
   if (nota != null) { rank.push(entry); rank.sort((a, b) => b.nota - a.nota); rank = rank.slice(0, 5); store.set('rank:' + G.id, rank); }
@@ -2344,11 +2357,39 @@ function drawVidHero(x, v, W, H) {
   gr.addColorStop(0, ink); gr.addColorStop(1, 'rgba(25,24,26,0)'); x.fillStyle = gr; x.fillRect(0, 0, W, gy);
 }
 
+
+/* ---------------- Ranking online (Supabase) ---------------- */
+const Online = {
+  headers() { return { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' }; },
+  async save(row) {
+    try {
+      const r = await fetch(SB_URL + '/rest/v1/karaoke_scores', { method: 'POST', headers: Object.assign(this.headers(), { Prefer: 'return=minimal' }), body: JSON.stringify(row) });
+      if (r.ok) { toast('Sua nota entrou no ranking geral!', 2500); renderFame(); } else console.warn('ranking', r.status, await r.text());
+    } catch (e) { console.warn('ranking offline', e); }
+  },
+  async load(limit) {
+    const q = limit ? `order=nota.desc,created_at.asc&limit=${limit}` : 'order=created_at.desc&limit=1000';
+    const r = await fetch(SB_URL + '/rest/v1/karaoke_scores?select=name,song,artist,nota,created_at&' + q, { headers: this.headers() });
+    if (!r.ok) throw new Error('ranking ' + r.status);
+    return (await r.json()).map(x => ({ name: x.name, song: x.song, artist: x.artist, nota: x.nota, at: Date.parse(x.created_at) }));
+  }
+};
+
 /* ---------------- Ranking geral ---------------- */
 let rkTab = 'top';
+let rkScope = 'online', rkOnline = null;
 function renderRanking() {
   $$('#rkTabs [data-rk]').forEach(b => b.setAttribute('aria-pressed', b.dataset.rk === rkTab));
-  const h = store.get('history', []); const list = $('#rkList');
+  $$('#rkScope [data-sc]').forEach(b => b.setAttribute('aria-pressed', b.dataset.sc === rkScope));
+  $('#rkClear').hidden = rkScope === 'online';
+  $('#rkNote').textContent = rkScope === 'online' ? 'Notas de todo mundo que cantou no Palco Aberto, salvas online.' : 'Só as notas deste aparelho e deste navegador.';
+  const list = $('#rkList');
+  if (rkScope === 'online' && !rkOnline) {
+    list.innerHTML = '<li><span>Carregando o ranking geral…</span></li>';
+    Online.load().then(rows => { rkOnline = rows; renderRanking(); }).catch(() => { rkOnline = null; list.innerHTML = '<li><span>Não consegui carregar o ranking online. Confira a internet.</span></li>'; });
+    return;
+  }
+  const h = rkScope === 'online' ? rkOnline : store.get('history', []);
   const row = (i, who, sub, nt) => `<li class="${i < 3 ? 'top' : ''}"><div class="rk-row" style="width:100%"><span class="pos">${i + 1}º</span><span class="who">${esc(who)}<small>${esc(sub)}</small></span><span class="nt">${nt}</span></div></li>`;
   if (!h.length) { list.innerHTML = '<li><span>Ninguém cantou ainda. A primeira nota entra aqui.</span></li>'; return; }
   if (rkTab === 'top') {
@@ -2361,7 +2402,8 @@ function renderRanking() {
     list.innerHTML = Object.values(m).sort((a, b) => b.n - a.n || b.best - a.best).map((r, i) => row(i, r.song, `${r.artist ? r.artist + ' · ' : ''}cantada ${r.n}x · recorde de ${r.who}`, r.best)).join('');
   }
 }
-function openRanking() { renderRanking(); openSheet('#rankSheet'); }
+function openRanking() { rkOnline = null; renderRanking(); openSheet('#rankSheet'); }
+$('#rkScope').addEventListener('click', e => { const b = e.target.closest('[data-sc]'); if (b) { rkScope = b.dataset.sc; renderRanking(); } });
 $('#btnRanking').addEventListener('click', openRanking);
 $('#btnRank2').addEventListener('click', openRanking);
 $('#rkTabs').addEventListener('click', e => { const b = e.target.closest('[data-rk]'); if (b) { rkTab = b.dataset.rk; renderRanking(); } });
@@ -2371,6 +2413,7 @@ $('#rkClear').addEventListener('click', e => {
   b.dataset.armed = '1'; b.textContent = 'Toque de novo para zerar'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Zerar ranking'; }, 3500);
 });
 $('#whoName').addEventListener('input', e => { settings.name = e.target.value.trim() || 'Você'; saveSettings(); });
+$('#whoName').addEventListener('keydown', e => { if (e.key === 'Enter' && !$('#btnStart').disabled) $('#btnStart').click(); });
 
 
 /* ---------------- Página inicial viva ---------------- */
@@ -2388,8 +2431,9 @@ $('#whoName').addEventListener('input', e => { settings.name = e.target.value.tr
   $('#chips').innerHTML = sug.map(t => `<button class="chip" type="button">${esc(t)}</button>`).join('');
   $('#chips').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; $('#ytQuery').value = c.textContent; $('#ytForm').requestSubmit(); });
 })();
-function renderFame() {
-  const h = store.get('history', []), top = [...h].sort((a, b) => b.nota - a.nota || a.at - b.at).slice(0, 3);
+function renderFame(rows) {
+  if (!rows) Online.load(3).then(r => renderFame(r)).catch(() => {});
+  const h = rows || store.get('history', []), top = [...h].sort((a, b) => b.nota - a.nota || a.at - b.at).slice(0, 3);
   $('#fame').innerHTML = top.length ? top.map((r, i) => `<article><span class="pos">${i + 1}º lugar</span><b>${r.nota}</b><span class="nm">${esc(r.name)}</span><span class="sg">${esc(r.song)}${r.artist ? ' · ' + esc(r.artist) : ''}</span></article>`).join('')
     : `<article><span class="pos">1º lugar</span><b>—</b><span class="nm">Está vago</span><span class="sg">Cante a primeira música e entre aqui.</span></article>`;
 }
@@ -2445,8 +2489,6 @@ Hero.start();
 /* =========================================================
    Salas: convidados comentam, reagem e entram na fila pelo celular
    ========================================================= */
-const SB_URL = 'https://dlyaxfdadjpblxpmdaks.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRseWF4ZmRhZGpwYmx4cG1kYWtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2Mjk0NDcsImV4cCI6MjEwODIwNTQ0N30.eruc3KWOwo7qf4htB3QmJQP18KqxP8P27JHIC-FjTgU';
 function loadScript(src) { return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = () => rej(new Error('Não consegui carregar ' + src)); document.head.appendChild(sc); }); }
 const myId = (() => { let v = store.get('myId', null); if (!v) { v = Math.random().toString(36).slice(2, 10); store.set('myId', v); } return v; })();
 const Room = {
