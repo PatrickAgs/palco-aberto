@@ -153,6 +153,49 @@ h2 em{font-style:normal;box-shadow:inset 0 -.16em 0 var(--yellow)}
 .rk-row .nt{font:400 22px/1 var(--sans);font-variant-numeric:tabular-nums}
 .yttap{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);font:400 12px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:10px 16px;border-radius:900px;background:var(--yellow);color:var(--black);pointer-events:none;white-space:nowrap}
 
+/* ---------- salas ---------- */
+.roomhead{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:center}
+.qr{background:#fff;padding:10px;width:clamp(130px,30vw,180px);aspect-ratio:1;display:grid;place-items:center}
+.qr svg,.qr img{width:100%;height:100%;display:block}
+.roomcode{font:400 clamp(44px,9vw,72px)/.9 var(--sans);letter-spacing:.04em;color:var(--yellow)}
+.roomlink{font:400 12px/1.3 var(--mono);color:var(--sand);overflow-wrap:anywhere}
+.queue{margin:0;padding:0;list-style:none;border:1px solid var(--charcoal)}
+.queue li{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--charcoal)}
+.queue li:first-child{border-top:0}
+.queue li .q{flex:1;min-width:0}
+.queue li .q b{font-weight:400;display:block}
+.queue li .q small{font:400 12px/1.3 var(--mono);color:var(--mute);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.queue li.now{background:var(--yellow);color:var(--black)}
+.queue li.now small{color:var(--black)}
+.turnbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;border:1px solid var(--yellow);padding:14px 18px}
+.turnbar b{font:400 clamp(22px,3vw,30px)/1.1 var(--sans);color:var(--yellow)}
+.turnbar span{color:var(--sand)}
+.roompill{font:400 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:8px 12px;border-radius:900px;border:1px solid var(--yellow);color:var(--yellow);background:transparent;cursor:pointer;white-space:nowrap}
+.feed div.real{border-color:var(--yellow);background:rgba(0,0,0,.82);font-size:clamp(16px,2.1vw,22px)}
+.feed div.real b{color:var(--yellow)}
+.bigturn{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:5}
+.bigturn div{background:var(--yellow);color:var(--black);padding:22px 34px;text-align:center;animation:introIn 5s cubic-bezier(.2,.8,.2,1) forwards}
+.bigturn span{font:400 13px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:8px}
+.bigturn b{font:400 clamp(36px,7vw,72px)/1 var(--sans);letter-spacing:-.03em}
+/* ---------- controle do convidado (celular) ---------- */
+.guest{max-width:560px;margin:0 auto;padding-block:max(16px,env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-bottom,0px));padding-left:var(--gutter-l);padding-right:var(--gutter-r);display:flex;flex-direction:column;gap:18px}
+.g-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.g-top .wm{font:400 26px/1 var(--sans);color:var(--yellow);letter-spacing:-.03em;text-transform:uppercase}
+.g-now{border:1px solid var(--charcoal);padding:16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:end}
+.g-now .label{grid-column:1/-1}
+.g-now b{font:400 22px/1.15 var(--sans);overflow-wrap:anywhere}
+.g-now small{color:var(--sand);font-size:14px}
+.g-now .nt{grid-row:2/4;grid-column:2;font:400 54px/.9 var(--sans);color:var(--yellow);font-variant-numeric:tabular-nums}
+.reacts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.reacts button{font-size:34px;line-height:1;aspect-ratio:1;border:1px solid var(--charcoal);background:transparent;border-radius:16px;cursor:pointer;transition:transform .1s}
+.reacts button:active{transform:scale(.9);border-color:var(--yellow)}
+.reacts button.txt{font:400 15px/1 var(--mono);color:var(--yellow);text-transform:uppercase}
+.g-form{display:flex;gap:8px}
+.g-form input{flex:1;min-width:0}
+.yourturn{position:fixed;inset:0;z-index:70;background:var(--yellow);color:var(--black);display:grid;place-items:center;text-align:center;padding:24px}
+.yourturn b{font:400 clamp(48px,14vw,96px)/.95 var(--sans);letter-spacing:-.04em;display:block}
+.yourturn p{font:400 16px/1.4 var(--sans);margin-top:16px}
+
 /* ---------- folhas (modais) ---------- */
 .sheet{position:fixed;inset:0;z-index:40;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center}
 @media (min-width:700px){.sheet{align-items:center;padding:24px}}
@@ -278,6 +321,7 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
   <nav class="topnav" aria-label="Ações">
     <button class="pill" id="btnImport" type="button">Importar pacote .zip</button>
     <button class="pill" id="btnHelp" type="button">Como gerar músicas</button>
+    <button class="pill fill" id="btnRoom" type="button">Criar sala</button>
     <button class="pill" id="btnRanking" type="button">Ranking</button>
     <button class="pill" id="btnSettings" type="button">Ajustes</button>
     <input type="file" id="fileZip" accept=".zip,application/zip" multiple hidden>
@@ -295,6 +339,7 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
     </div>
   </header>
 
+  <div class="turnbar" id="turnbar" hidden></div>
   <section class="yt-sec" aria-labelledby="t-yt">
     <div class="ytpanel">
     <div class="badge"><span>Modo YouTube</span><span>Sem baixar nada</span></div>
@@ -438,6 +483,7 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
     <div class="prog"><i id="prog"></i></div>
     <button class="icon" type="button" id="btnPause" aria-label="Pausar">❚❚</button>
     <div class="st-title"><b id="stTitle"></b><span id="stArtist"></span></div>
+    <button class="roompill" type="button" id="roomPill" hidden></button>
     <div class="st-score"><b id="stScore">0</b><span id="stTime">0:00</span></div>
   </div>
   <div class="ytbox" id="ytBox" hidden></div>
@@ -459,6 +505,7 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
   </div>
   <div class="crowd" id="crowdBox"><canvas id="crowd"></canvas></div>
   <div class="intro" id="intro" hidden></div>
+  <div class="bigturn" id="bigTurn" hidden></div>
   <canvas class="fx" id="fx"></canvas>
   <div class="flash" id="flash"></div>
 </section>
@@ -477,6 +524,58 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
     <div class="actions"><button class="pill fill" type="button" data-close>Fechar</button><button class="pill ghost sm" type="button" id="rkClear">Zerar ranking</button></div>
   </div>
 </div>
+
+<!-- sala -->
+<div class="sheet" id="roomSheet" hidden role="dialog" aria-modal="true" aria-labelledby="roomTitle">
+  <div class="panel">
+    <div class="panel-head"><h3 id="roomTitle">Sala da galera</h3><button class="icon" type="button" data-close aria-label="Fechar">✕</button></div>
+    <div class="roomhead">
+      <div class="qr" id="roomQr" aria-label="QR code da sala"></div>
+      <div style="min-width:0;display:flex;flex-direction:column;gap:10px">
+        <span class="label">Aponte a câmera do celular ou digite o link</span>
+        <div class="roomcode" id="roomCode">····</div>
+        <div class="roomlink" id="roomLink"></div>
+        <div class="actions"><button class="pill sm" type="button" id="roomCopy">Copiar link</button></div>
+      </div>
+    </div>
+    <p class="sub" id="roomCount">Conectando…</p>
+    <div class="field">
+      <span class="label">Fila de quem vai cantar <span id="roomQn"></span></span>
+      <ol class="queue" id="roomQueue"></ol>
+    </div>
+    <div class="actions">
+      <button class="pill fill" type="button" id="roomNext">Chamar próximo</button>
+      <button class="pill ghost sm" type="button" id="roomEnd">Encerrar sala</button>
+    </div>
+  </div>
+</div>
+
+<!-- controle do convidado -->
+<section class="guest" id="guest" hidden aria-label="Controle da sala">
+  <div class="g-top"><span class="wm">Palco Aberto✱</span><span class="badge" style="padding:7px 14px"><span id="gCode">Sala</span><span id="gStatus">Conectando…</span></span></div>
+  <div id="gJoin" class="field">
+    <label class="label" for="gName">Qual é o seu nome?</label>
+    <input type="text" id="gName" maxlength="20" autocomplete="nickname" placeholder="Seu nome">
+    <button class="pill fill" type="button" id="gEnter">Entrar na sala</button>
+  </div>
+  <div id="gMain" hidden style="display:flex;flex-direction:column;gap:18px">
+    <div class="g-now"><span class="label">Agora no palco</span><b id="gSong">Esperando a próxima música</b><small id="gSinger"></small><span class="nt" id="gNota">—</span></div>
+    <div class="turnbar" id="gQueueBox" style="justify-content:space-between"><span id="gQueue">Você não está na fila.</span><button class="pill fill sm" type="button" id="gWant">Quero cantar</button></div>
+    <div class="field" id="gWantBox" hidden>
+      <label class="label" for="gSongReq">Qual música você quer cantar? (opcional)</label>
+      <div class="g-form"><input type="text" id="gSongReq" maxlength="60" placeholder="Ex.: Evidências"><button class="pill fill sm" type="button" id="gWantOk">Entrar na fila</button></div>
+    </div>
+    <span class="label">Reagir</span>
+    <div class="reacts" id="gReacts">
+      <button type="button" data-r="👏">👏</button><button type="button" data-r="🔥">🔥</button><button type="button" data-r="❤️">❤️</button><button type="button" data-r="😂">😂</button>
+      <button type="button" data-r="🎤">🎤</button><button type="button" data-r="🤘">🤘</button><button type="button" data-r="😱">😱</button><button type="button" class="txt" data-r="BIS">Bis!</button>
+    </div>
+    <span class="label">Comentar na tela</span>
+    <div class="chips" id="gQuick"></div>
+    <form class="g-form" id="gForm"><input type="text" id="gText" maxlength="80" placeholder="Escreva um comentário" enterkeyhint="send"><button class="pill fill sm" type="submit">Enviar</button></form>
+  </div>
+</section>
+<div class="yourturn" id="yourTurn" hidden><div><b>É a sua vez!</b><p id="yourTurnSong">Vai pro microfone 🎤</p><button class="pill" style="border-color:var(--black);color:var(--black);margin-top:18px" type="button" id="yourTurnOk">Bora!</button></div></div>
 
 <!-- pausa -->
 <div class="sheet" id="pauseSheet" hidden role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
@@ -519,6 +618,10 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
           <button class="pill fill" type="button" id="btnAgain">Cantar de novo</button>
           <button class="pill" type="button" id="btnLib">Escolher outra</button>
           <button class="pill ghost" type="button" id="btnRank2">Ranking geral</button>
+        </div>
+        <div class="turnbar" id="nextBox" hidden>
+          <span>Próximo da fila</span><b id="nextName"></b><span id="nextSong"></span>
+          <button class="pill fill sm" type="button" id="btnCallNext">Chamar</button>
         </div>
       </div>
     </div>
@@ -1233,6 +1336,12 @@ function showJudge(j) {
 function announce(txt) { const b = $('#announce'); b.textContent = txt; b.classList.remove('go'); void b.offsetWidth; b.classList.add('go'); }
 function flash() { const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
 function shake() { const s = $('#stage'); s.classList.remove('shake'); void s.offsetWidth; s.classList.add('shake'); }
+function roomComment(name, text) {
+  if ($('#stage').hidden) { toast(name + ': ' + text, 4000); return; }
+  const feed = $('#feed'), d = document.createElement('div'); d.className = 'real';
+  d.innerHTML = `<b>${esc(name)}</b> ${esc(text)}`; feed.appendChild(d); while (feed.children.length > 4) feed.firstChild.remove();
+  setTimeout(() => d.remove(), 7000);
+}
 function comment(kind, forced) {
   if (!settings.feed) return;
   const feed = $('#feed'); const d = document.createElement('div');
@@ -1422,6 +1531,7 @@ function finish() {
   Beat.detach(); $('#intro').hidden = true;
   if (nota != null) { rank.push(entry); rank.sort((a, b) => b.nota - a.nota); rank = rank.slice(0, 5); store.set('rank:' + G.id, rank); }
   $('#stage').hidden = true; $('#results').hidden = false; $('#results').scrollTop = 0;
+  Room.songEnded(nota);
   $('#resSong').textContent = G.meta.title; $('#resWho').textContent = entry.name;
   $('#resNota').textContent = nota == null ? '—' : nota;
   const v = VERDICT.find(r => (nota ?? 0) >= r[0]);
@@ -2321,6 +2431,184 @@ const Hero = {
   }
 };
 Hero.start();
+
+
+/* =========================================================
+   Salas: convidados comentam, reagem e entram na fila pelo celular
+   ========================================================= */
+const SB_URL = 'https://dlyaxfdadjpblxpmdaks.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRseWF4ZmRhZGpwYmx4cG1kYWtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2Mjk0NDcsImV4cCI6MjEwODIwNTQ0N30.eruc3KWOwo7qf4htB3QmJQP18KqxP8P27JHIC-FjTgU';
+function loadScript(src) { return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = () => rej(new Error('Não consegui carregar ' + src)); document.head.appendChild(sc); }); }
+const myId = (() => { let v = store.get('myId', null); if (!v) { v = Math.random().toString(36).slice(2, 10); store.set('myId', v); } return v; })();
+const Room = {
+  code: null, ch: null, role: null, queue: [], current: null, people: {}, lastState: '',
+  async client() {
+    if (!window.supabase) await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js');
+    if (!this.cli) this.cli = window.supabase.createClient(SB_URL, SB_KEY, { realtime: { params: { eventsPerSecond: 20 } } });
+    return this.cli;
+  },
+  newCode() { const A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let c = ''; for (let i = 0; i < 4; i++) c += A[Math.floor(Math.random() * A.length)]; return c; },
+  link() { return location.origin + location.pathname + '#sala-' + this.code; },
+  // ---------- anfitrião (tela grande) ----------
+  async host(silent) {
+    if (this.role === 'host') { this.openSheet(); return; }
+    const saved = store.get('hostRoom', null);
+    this.code = saved && Date.now() - saved.at < 12 * 3600e3 ? saved.code : this.newCode();
+    this.queue = saved && saved.code === this.code ? saved.queue || [] : [];
+    this.role = 'host'; if (!silent) this.openSheet();
+    try {
+      const cli = await this.client();
+      this.ch = cli.channel('palco-' + this.code, { config: { broadcast: { self: false }, presence: { key: 'host-' + myId } } });
+      this.ch.on('broadcast', { event: 'msg' }, ({ payload }) => this.onGuest(payload || {}));
+      this.ch.on('presence', { event: 'sync' }, () => { this.people = {}; Object.entries(this.ch.presenceState()).forEach(([k, arr]) => { const m = arr[0]; if (m && m.role === 'guest') this.people[m.id] = m.name; }); this.renderSheet(); this.broadcast(true); });
+      this.ch.subscribe(async st => { if (st === 'SUBSCRIBED') { await this.ch.track({ role: 'host' }); this.renderSheet(); this.broadcast(true); } else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') { $('#roomCount').textContent = 'Sem conexão com a sala. Confira a internet.'; } });
+      clearInterval(this.tick); this.tick = setInterval(() => this.broadcast(false), 1500);
+    } catch (e) { $('#roomCount').textContent = 'Não consegui abrir a sala: ' + e.message; }
+    this.save(); this.renderAll();
+  },
+  save() { if (this.role === 'host') store.set('hostRoom', { code: this.code, queue: this.queue, at: Date.now() }); },
+  end() {
+    try { this.ch && this.ch.unsubscribe(); } catch (e) {}
+    clearInterval(this.tick); store.set('hostRoom', null);
+    Object.assign(this, { code: null, ch: null, role: null, queue: [], current: null, people: {} });
+    $('#roomSheet').hidden = true; this.renderAll(); toast('Sala encerrada.');
+  },
+  async openSheet() {
+    $('#roomCode').textContent = this.code; $('#roomLink').textContent = this.link().replace(/^https?:\/\//, '');
+    openSheet('#roomSheet'); this.renderSheet();
+    try { if (!window.qrcode) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'); const q = qrcode(0, 'M'); q.addData(this.link()); q.make(); $('#roomQr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
+    catch (e) { $('#roomQr').textContent = 'QR indisponível'; }
+  },
+  renderSheet() {
+    if (this.role !== 'host') return;
+    const n = Object.keys(this.people).length;
+    $('#roomCount').textContent = n ? `${n} ${n === 1 ? 'pessoa conectada' : 'pessoas conectadas'}: ${Object.values(this.people).join(', ')}` : 'Ninguém entrou ainda. Mostre o QR code para a galera.';
+    $('#roomQn').textContent = this.queue.length ? '· ' + this.queue.length : '';
+    const items = [];
+    if (this.current) items.push(`<li class="now"><div class="q"><b>🎤 ${esc(this.current.name)}</b><small>${esc(this.current.song || 'cantando agora')}</small></div></li>`);
+    this.queue.forEach((q, i) => items.push(`<li><div class="q"><b>${i + 1}. ${esc(q.name)}${this.people[q.id] ? '' : ' <small style="display:inline">(saiu?)</small>'}</b><small>${esc(q.song || 'sem pedido de música')}</small></div><button class="pill sm" type="button" data-qcall="${i}">Chamar</button><button class="icon" type="button" data-qdel="${i}" aria-label="Tirar da fila">✕</button></li>`));
+    $('#roomQueue').innerHTML = items.join('') || '<li><div class="q"><small>A fila está vazia. No celular, a pessoa toca em “Quero cantar”.</small></div></li>';
+  },
+  renderAll() {
+    const on = this.role === 'host';
+    $('#btnRoom').textContent = on ? 'Sala ' + this.code : 'Criar sala';
+    const pill = $('#roomPill'); pill.hidden = !on; if (on) pill.textContent = `Sala ${this.code} · fila ${this.queue.length}`;
+    const tb = $('#turnbar');
+    if (on && this.current) { tb.hidden = false; tb.innerHTML = `<span>Vez de</span><b>${esc(this.current.name)}</b><span>${this.current.song ? 'pediu ' + esc(this.current.song) : 'escolha a música abaixo'}</span>`; }
+    else if (on) { tb.hidden = false; tb.innerHTML = `<span>Sala <b style="font-size:inherit">${this.code}</b> aberta</span><span>${this.queue.length ? this.queue.length + ' na fila' : 'fila vazia'}</span><button class="pill fill sm" type="button" data-roomopen>Ver sala e fila</button>`; }
+    else tb.hidden = true;
+    this.renderNext(); this.renderSheet();
+  },
+  renderNext() {
+    const box = $('#nextBox'); const nx = this.queue[0];
+    if (this.role !== 'host' || !nx) { box.hidden = true; return; }
+    box.hidden = false; $('#nextName').textContent = nx.name; $('#nextSong').textContent = nx.song ? '· ' + nx.song : '';
+  },
+  onGuest(m) {
+    if (!m.id || !m.name) return;
+    const name = String(m.name).slice(0, 20), now = performance.now();
+    this.rate = this.rate || {}; if (this.rate[m.id] && now - this.rate[m.id] < 600) return; this.rate[m.id] = now;
+    if (m.kind === 'c') { roomComment(name, String(m.text || '').slice(0, 80)); if (G.running) G.hype = Math.min(100, G.hype + 3); }
+    else if (m.kind === 'r') this.react(name, String(m.e || '').slice(0, 4));
+    else if (m.kind === 'q') { if (!this.queue.some(q => q.id === m.id) && !(this.current && this.current.id === m.id)) { this.queue.push({ id: m.id, name, song: String(m.song || '').slice(0, 60) }); toast(`${name} entrou na fila${m.song ? ' com ' + m.song : ''}.`); } this.save(); this.renderAll(); this.broadcast(true); }
+    else if (m.kind === 'uq') { this.queue = this.queue.filter(q => q.id !== m.id); this.save(); this.renderAll(); this.broadcast(true); }
+  },
+  react(name, e) {
+    if (e === 'BIS') { if (G.running) { announce('BIS! BIS!'); SFX.crowdVoice('woo'); } roomComment(name, 'pediu BIS! 🔁'); return; }
+    if (G.running && !$('#stage').hidden) {
+      const W = fxCv.clientWidth, H = fxCv.clientHeight;
+      for (let i = 0; i < 4; i++) G.particles.push({ kind: 'glyph', x: W * (0.1 + Math.random() * 0.8), y: H - 40, vx: (Math.random() - 0.5) * 50, vy: -(110 + Math.random() * 120), life: 0, max: 2.2, ch: e, size: 28 + Math.random() * 16, col: 'bone', rot: 0, vr: (Math.random() - 0.5) * 2 });
+      G.hype = Math.min(100, G.hype + 2);
+      if (e === '👏' && Math.random() < 0.5) SFX.applause(0.8, 0.4); if (e === '🔥' && Math.random() < 0.3) SFX.crowdVoice('woo');
+      if (Math.random() < 0.35) roomComment(name, e);
+    }
+  },
+  broadcast(force) {
+    if (this.role !== 'host' || !this.ch) return;
+    const st = { kind: 's', playing: !!(G.running && !G.ended), title: G.running ? ((G.info && G.info.title) || (G.meta && G.meta.title) || '') : '', artist: G.running ? ((G.info && G.info.artist) || '') : '',
+      nota: G.running && G.hasMic ? Math.round(G.score / 100) : null, singer: this.current ? this.current.name : (G.running ? settings.name : ''), current: this.current ? this.current.id : null,
+      queue: this.queue.map(q => ({ id: q.id, name: q.name })) };
+    const key = JSON.stringify(st); if (!force && key === this.lastState && performance.now() - (this.lastSent || 0) < 6000) return;
+    this.lastState = key; this.lastSent = performance.now();
+    this.ch.send({ type: 'broadcast', event: 'state', payload: st }).catch(() => {});
+  },
+  call(i) {
+    const q = this.queue.splice(i, 1)[0]; if (!q) return;
+    if (this.current) this.queue.push(this.current); // quem cantava volta pro fim (rodízio)
+    this.current = q; settings.name = q.name; saveSettings();
+    this.ch && this.ch.send({ type: 'broadcast', event: 'turn', payload: { id: q.id, name: q.name, song: q.song } }).catch(() => {});
+    $('#roomSheet').hidden = true;
+    const bt = $('#bigTurn'); bt.innerHTML = `<div><span>Próximo no palco</span><b>${esc(q.name)}</b></div>`; bt.hidden = false; clearTimeout(this.btT); this.btT = setTimeout(() => bt.hidden = true, 5000);
+    if (!$('#results').hidden || !$('#stage').hidden) quitToHome();
+    toast(`Vez de ${q.name}!`, 4000); SFX.ding();
+    if (q.song) { $('#ytQuery').value = q.song; $('#ytForm').requestSubmit(); }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.save(); this.renderAll(); this.broadcast(true);
+  },
+  songEnded() {
+    if (this.role !== 'host') return;
+    if (this.current) { this.queue.push(this.current); this.current = null; } // rodízio
+    this.save(); this.renderAll(); this.broadcast(true);
+  },
+  // ---------- convidado (celular) ----------
+  async join(code) {
+    this.role = 'guest'; this.code = code;
+    $('#home').hidden = true; $('#eq').hidden = true; $('#guest').hidden = false;
+    $('#gCode').textContent = 'Sala ' + code; $('#gName').value = store.get('guestName', '');
+    $('#gQuick').innerHTML = ['Arrasou!', 'Que voz!', 'Desafinou kkkk', 'Mais alto!', 'Canta outra!', 'Chama no The Voice', 'Hino!'].map(t => `<button class="chip" type="button">${esc(t)}</button>`).join('');
+    try {
+      const cli = await this.client();
+      this.ch = cli.channel('palco-' + code, { config: { broadcast: { self: false }, presence: { key: 'g-' + myId } } });
+      this.ch.on('broadcast', { event: 'state' }, ({ payload }) => this.onState(payload || {}));
+      this.ch.on('broadcast', { event: 'turn' }, ({ payload }) => { if (payload && payload.id === myId) this.myTurn(payload); });
+      this.ch.subscribe(st => { $('#gStatus').textContent = st === 'SUBSCRIBED' ? 'Conectado' : st === 'CLOSED' ? 'Desconectado' : 'Conectando…'; if (st === 'SUBSCRIBED' && this.gname) this.ch.track({ role: 'guest', id: myId, name: this.gname }); });
+    } catch (e) { $('#gStatus').textContent = 'Sem conexão'; toast('Não consegui entrar na sala. Confira a internet.'); }
+    if (store.get('guestName', '')) this.enter(store.get('guestName', ''));
+  },
+  enter(name) {
+    name = String(name || '').trim().slice(0, 20); if (!name) { $('#gName').focus(); toast('Coloque seu nome para entrar.'); return; }
+    this.gname = name; store.set('guestName', name);
+    $('#gJoin').hidden = true; $('#gMain').hidden = false;
+    if (this.ch) this.ch.track({ role: 'guest', id: myId, name }).catch(() => {});
+  },
+  send(m) { if (!this.ch) return; const now = performance.now(); if (now - (this.lastSend || 0) < 700) { toast('Calma! Uma de cada vez 😄', 1500); return false; } this.lastSend = now; this.ch.send({ type: 'broadcast', event: 'msg', payload: Object.assign({ id: myId, name: this.gname }, m) }).catch(() => {}); return true; },
+  onState(st) {
+    this.state = st;
+    $('#gSong').textContent = st.playing ? (st.title || 'Música tocando') : 'Esperando a próxima música';
+    $('#gSinger').textContent = st.playing ? (st.singer ? 'Cantando: ' + st.singer + (st.artist ? ' · ' + st.artist : '') : (st.artist || '')) : (st.singer ? 'Vez de ' + st.singer : '');
+    $('#gNota').textContent = st.playing && st.nota != null ? st.nota : '—';
+    const q = st.queue || [], pos = q.findIndex(x => x.id === myId);
+    const inQ = pos >= 0, isNow = st.current === myId;
+    $('#gQueue').textContent = isNow ? 'É a sua vez! 🎤' : inQ ? `Você é ${pos === 0 ? 'o próximo!' : 'o ' + (pos + 1) + 'º da fila'}` : q.length ? `${q.length} na fila` : 'A fila está vazia.';
+    $('#gWant').textContent = inQ ? 'Sair da fila' : 'Quero cantar'; $('#gWant').dataset.in = inQ ? '1' : '';
+  },
+  myTurn(p) { $('#yourTurnSong').textContent = p.song ? `Sua música: ${p.song}. Vai pro microfone 🎤` : 'Vai pro microfone e escolha a música 🎤'; $('#yourTurn').hidden = false; try { navigator.vibrate && navigator.vibrate([300, 120, 300, 120, 500]); } catch (e) {} }
+};
+// anfitrião: botões
+$('#btnRoom').addEventListener('click', () => Room.host());
+$('#roomPill').addEventListener('click', () => Room.openSheet());
+$('#roomEnd').addEventListener('click', e => { const b = e.currentTarget; if (b.dataset.armed) { delete b.dataset.armed; b.textContent = 'Encerrar sala'; Room.end(); return; } b.dataset.armed = '1'; b.textContent = 'Toque de novo para encerrar'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Encerrar sala'; }, 3500); });
+$('#roomNext').addEventListener('click', () => { if (Room.queue.length) Room.call(0); else toast('A fila está vazia.'); });
+$('#btnCallNext').addEventListener('click', () => Room.call(0));
+$('#roomCopy').addEventListener('click', () => { const l = Room.link(); (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => toast('Link copiado.'), () => toast(l, 6000)); });
+$('#roomQueue').addEventListener('click', e => { const c = e.target.closest('[data-qcall]'), d = e.target.closest('[data-qdel]'); if (c) Room.call(+c.dataset.qcall); if (d) { Room.queue.splice(+d.dataset.qdel, 1); Room.save(); Room.renderAll(); Room.broadcast(true); } });
+document.addEventListener('click', e => { if (e.target.closest('[data-roomopen]')) Room.openSheet(); });
+// convidado: botões
+$('#gEnter').addEventListener('click', () => Room.enter($('#gName').value));
+$('#gName').addEventListener('keydown', e => { if (e.key === 'Enter') Room.enter($('#gName').value); });
+$('#gReacts').addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (b && Room.send({ kind: 'r', e: b.dataset.r })) { b.animate([{ transform: 'scale(1.25)' }, { transform: 'scale(1)' }], 220); } });
+$('#gQuick').addEventListener('click', e => { const c = e.target.closest('.chip'); if (c && Room.send({ kind: 'c', text: c.textContent })) toast('Enviado!', 1200); });
+$('#gForm').addEventListener('submit', e => { e.preventDefault(); const t = $('#gText').value.trim(); if (!t) return; if (Room.send({ kind: 'c', text: t })) { $('#gText').value = ''; toast('Apareceu na tela!', 1500); } });
+$('#gWant').addEventListener('click', () => { if ($('#gWant').dataset.in) { Room.lastSend = 0; Room.send({ kind: 'uq' }); return; } $('#gWantBox').hidden = !$('#gWantBox').hidden; $('#gSongReq').focus(); });
+$('#gWantOk').addEventListener('click', () => { Room.lastSend = 0; if (Room.send({ kind: 'q', song: $('#gSongReq').value.trim() })) { $('#gWantBox').hidden = true; toast('Você entrou na fila!', 2000); } });
+$('#yourTurnOk').addEventListener('click', () => $('#yourTurn').hidden = true);
+// abrir como convidado pelo link #sala-XXXX; anfitrião retoma a sala aberta
+(function roomBoot() {
+  const m = location.hash.match(/^#sala-([A-Z0-9]{4})$/i);
+  if (m) { Room.join(m[1].toUpperCase()); return; }
+  const saved = store.get('hostRoom', null);
+  if (saved && Date.now() - saved.at < 12 * 3600e3) Room.host(true);
+})();
 
 /* ---------------- Equalizador decorativo ---------------- */
 (function eq() {
