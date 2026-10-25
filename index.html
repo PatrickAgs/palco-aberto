@@ -135,8 +135,10 @@ h2 em{font-style:normal;box-shadow:inset 0 -.16em 0 var(--yellow)}
 .ytcard span{font:400 11px/1.2 var(--mono);color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
 .stage.yt .modetag{right:auto;left:var(--gutter-l)}
 .stage.yt{grid-template-rows:auto minmax(0,1fr) minmax(80px,18vh) auto minmax(76px,13%)}
-.ytbox{position:relative;background:var(--black);display:flex;justify-content:center;min-height:0;overflow:hidden}
-.ytbox iframe{display:block;height:100%;width:auto;max-width:100%;aspect-ratio:16/9;border:0}
+.ytbox{position:relative;background:var(--black);display:flex;justify-content:center;align-items:center;min-height:0;min-width:0;overflow:hidden}
+.ytbox iframe{display:block;width:100%;height:auto;max-height:100%;aspect-ratio:16/9;border:0}
+@media (orientation:landscape){.ytbox iframe{width:auto;height:100%;max-width:100%}}
+@media (orientation:portrait){.stage.yt{grid-template-rows:auto auto minmax(120px,1fr) auto minmax(110px,22%)}}
 .intro{position:absolute;left:0;right:0;top:12%;display:flex;justify-content:center;pointer-events:none;z-index:4;padding-inline:16px}
 .intro-card{display:flex;gap:18px;align-items:center;background:var(--ink);border:1px solid var(--theme,var(--yellow));padding:14px 22px 14px 14px;max-width:min(560px,100%);animation:introIn 6s cubic-bezier(.2,.8,.2,1) forwards}
 .intro-card img{width:clamp(72px,14vw,120px);aspect-ratio:1;object-fit:cover;flex:none;background:var(--charcoal)}
@@ -229,7 +231,7 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
 .monbox.off .field{opacity:.4}
 
 /* ---------- palco ---------- */
-.stage{position:fixed;inset:0;z-index:20;background:var(--ink);display:grid;grid-template-rows:auto minmax(120px,30%) minmax(0,1fr) auto minmax(96px,18%);padding-top:env(safe-area-inset-top,0px);overflow:hidden}
+.stage{position:fixed;inset:0;z-index:20;background:var(--ink);display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(120px,30%) minmax(0,1fr) auto minmax(96px,18%);padding-top:env(safe-area-inset-top,0px);overflow:hidden}
 .stage.shake{animation:shake .45s cubic-bezier(.36,.07,.19,.97)}
 @keyframes shake{10%,90%{transform:translate(-2px,1px)}20%,80%{transform:translate(4px,-2px)}30%,50%,70%{transform:translate(-6px,2px)}40%,60%{transform:translate(6px,-1px)}}
 .st-top{display:flex;align-items:center;gap:12px;padding-block:10px;padding-left:var(--gutter-l);padding-right:var(--gutter-r)}
@@ -276,7 +278,7 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
 .bars i{flex:1;background:var(--charcoal);height:40%;transition:background .15s,height .15s}
 .bars i.on{background:var(--yellow);height:100%}
 .crowd{position:relative;min-height:0}
-.fx{position:absolute;inset:0;pointer-events:none;z-index:2}
+.fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
 .flash{position:absolute;inset:0;background:var(--yellow);opacity:0;pointer-events:none;z-index:3;mix-blend-mode:screen}
 .flash.go{animation:flash .5s ease-out}
 @keyframes flash{0%{opacity:.28}100%{opacity:0}}
