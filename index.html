@@ -230,6 +230,11 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
 .monbox .field{gap:6px}
 .monbox.off .field{opacity:.4}
 
+.duetbox{border:1px solid var(--charcoal);padding:16px;display:flex;flex-direction:column;gap:14px}
+.duetgrid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@media (min-width:560px){.duetgrid{grid-template-columns:1fr 1fr}.duetgrid .field:nth-child(2){grid-column:2;grid-row:1}}
+select{background:var(--ink);border:1px solid var(--charcoal);border-radius:900px;min-height:44px;padding:0 16px;color:var(--bone);width:100%;font:inherit}
+
 /* ---------- palco ---------- */
 .stage{position:fixed;inset:0;z-index:20;background:var(--ink);display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(120px,30%) minmax(0,1fr) auto minmax(96px,18%);padding-top:env(safe-area-inset-top,0px);overflow:hidden}
 .stage.shake{animation:shake .45s cubic-bezier(.36,.07,.19,.97)}
@@ -290,6 +295,8 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
 @media (min-width:820px){.res-hero{grid-template-columns:auto minmax(0,1fr);gap:48px}}
 .nota{display:flex;flex-direction:column;gap:6px}
 .nota span{font:400 13px/1 var(--mono);color:var(--sand);text-transform:uppercase;letter-spacing:.08em}
+.nota b.duo{font-size:clamp(76px,16vw,190px);white-space:nowrap}
+.nota .vs{font-size:.38em;color:var(--mute);margin:0 .12em;vertical-align:.45em}
 .nota b{font:400 clamp(130px,30vw,260px)/.82 var(--sans);letter-spacing:-.06em;color:var(--yellow);font-variant-numeric:tabular-nums}
 .stars{display:flex;gap:6px;font:400 30px/1 var(--sans);color:var(--charcoal)}
 .stars i{font-style:normal}
@@ -398,6 +405,15 @@ code{font:400 13px/1.3 var(--mono);color:var(--yellow);overflow-wrap:anywhere}
     <div class="field">
       <label class="label" for="whoName">Quem vai cantar?</label>
       <input type="text" id="whoName" maxlength="20" autocomplete="nickname" placeholder="Seu nome no ranking">
+    </div>
+    <div class="duetbox" id="duetBox" hidden>
+      <label class="check"><input type="checkbox" id="optDuet"> Cantar em dueto (2 microfones)</label>
+      <div id="duetFields" hidden class="duetgrid">
+        <div class="field"><label class="label" for="mic1Sel">Microfone de quem canta 1</label><select id="mic1Sel"></select><div class="miclvl"><i id="lvl1"></i></div></div>
+        <div class="field"><label class="label" for="whoName2">Quem canta junto</label><input type="text" id="whoName2" maxlength="20" autocomplete="off" placeholder="Nome"></div>
+        <div class="field"><label class="label" for="mic2Sel">Microfone de quem canta 2</label><select id="mic2Sel"></select><div class="miclvl"><i id="lvl2" style="background:#7fd1ff"></i></div></div>
+        <p class="micmsg" style="grid-column:1/-1">Fale em cada microfone e veja qual barra mexe.</p>
+      </div>
     </div>
     <div class="field">
       <span class="label">Dificuldade</span>
@@ -678,7 +694,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('palco:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('palco:' + k, JSON.stringify(v)); } catch (e) {} }
 };
-const settings = Object.assign({ name: 'Você', latency: 0, sfx: true, feed: true, diff: 'normal', guide: 30, autoSing: false, ytKey: '', monitor: false, monVol: 80, monFx: 20, tabCompare: true, denoise: true, voiceFx: 'estudio', autotune: 'off' }, store.get('settings', {}));
+const settings = Object.assign({ name: 'Você', latency: 0, sfx: true, feed: true, diff: 'normal', guide: 30, autoSing: false, ytKey: '', monitor: false, monVol: 80, monFx: 20, tabCompare: true, denoise: true, voiceFx: 'estudio', autotune: 'off', duet: false, mic1: '', mic2: '' }, store.get('settings', {}));
 const saveSettings = () => store.set('settings', settings);
 const TOL = { facil: 1.6, normal: 1.0, dificil: 0.6 };
 
@@ -805,11 +821,19 @@ const Mic = {
     if (this.an && !this.external) return true;
     this.detach();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
-    try { this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: !settings.monitor, noiseSuppression: false, autoGainControl: false, latency: 0, channelCount: 1 } }); }
-    catch (e) { return false; }
+    const stereo = settings.duet && settings.mic2 === 'R';
+    const ac0 = { echoCancellation: !settings.monitor, noiseSuppression: false, autoGainControl: false, latency: 0, channelCount: stereo ? 2 : 1 };
+    if (settings.mic1) ac0.deviceId = { exact: settings.mic1 };
+    try { this.stream = await navigator.mediaDevices.getUserMedia({ audio: ac0 }); }
+    catch (e) { if (!settings.mic1) return false; settings.mic1 = ''; saveSettings(); delete ac0.deviceId; try { this.stream = await navigator.mediaDevices.getUserMedia({ audio: ac0 }); } catch (e2) { return false; } }
     const c = ac(); this.src = c.createMediaStreamSource(this.stream); this.clean = this.src;
+    this.leftNode = this.rightNode = null;
+    if (stereo) { // receptor com 2 microfones: esquerdo = cantor 1, direito = cantor 2
+      const sp = c.createChannelSplitter(2), l = c.createGain(), r = c.createGain(); this.src.connect(sp); sp.connect(l, 0); sp.connect(r, 1);
+      this.leftNode = l; this.rightNode = r; this.clean = l;
+    }
     if (settings.denoise) {
-      try { this.ns = await Promise.race([makeRnnoise(c), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))]); this.src.connect(this.ns); this.clean = this.ns; }
+      try { this.ns = await Promise.race([makeRnnoise(c), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))]); this.clean.connect(this.ns); this.clean = this.ns; }
       catch (e) { console.warn(e); this.ns = null; toast('O supressor de ruído não carregou neste navegador. Seguindo sem ele.'); }
     }
     this.attach(this.clean); this.external = false; this.applyMonitor(); return true;
@@ -850,7 +874,8 @@ const Mic = {
       });
       dbl.connect(out);
       mk.connect(conv); conv.connect(wet); wet.connect(out); out.connect(c.destination);
-      this.mon = { out, wet, conv, nat, fx, dbl, dir, atg, from: this.clean };
+      this.mon = { out, wet, conv, nat, fx, dbl, dir, atg, pre, from: this.clean };
+      if (typeof Mic2 !== 'undefined' && this !== Mic2) Mic2.monitorLink();
     }
     const on = settings.monitor && !this.external;
     this.mon.out.gain.setTargetAtTime(on ? (settings.monVol / 100) * 1.6 : 0, c.currentTime, 0.03);
@@ -897,6 +922,7 @@ const Mic = {
   },
   read() { if (!this.an) return null; this.an.getFloatTimeDomainData(this.buf); return detectPitch(this.buf, ac().sampleRate); },
   stop() {
+    if (this === Mic && typeof Mic2 !== 'undefined') Mic2.stop2();
     if (this.at) { try { this.clean && this.clean.disconnect(this.at); this.at.disconnect(); } catch (e) {} this.at = null; }
     if (this.mon) { try { this.mon.from.disconnect(); this.mon.out.disconnect(); } catch (e) {} this.mon = null; if (this.an && this.hp && this.node) { try { this.node.connect(this.hp); } catch (e) {} } }
     if (this.ns) { try { this.src.disconnect(this.ns); this.ns.port.postMessage('destroy'); this.ns.disconnect(); } catch (e) {} this.ns = null; }
@@ -1132,6 +1158,7 @@ async function startMicTest() {
   const ok = await Mic.start();
   if (!ok) { $('#micMsg').textContent = 'Sem acesso ao microfone. Dá para cantar, mas sem nota. Libere o microfone nas permissões do navegador.'; $('#micNote').textContent = '✕'; return; }
   $('#micMsg').textContent = 'Cante um “lááá” para testar.';
+  await refreshDuet();
   micTestOn = true;
   const tick = () => {
     if (!micTestOn) return;
@@ -1139,7 +1166,9 @@ async function startMicTest() {
     if (r) {
       $('#micLvl').style.width = clamp(r.rms * 600, 0, 100) + '%';
       if (r.f > 0 && r.clarity > 0.75) { $('#micNote').textContent = noteName(ftom(r.f)); $('#micMsg').textContent = Math.round(r.f) + ' Hz · microfone funcionando'; }
+      $('#lvl1').style.width = clamp(r.rms * 600, 0, 100) + '%';
     }
+    if (Mic2.an) { const r2 = Mic2.read(); if (r2) $('#lvl2').style.width = clamp(r2.rms * 600, 0, 100) + '%'; }
     requestAnimationFrame(tick);
   };
   tick();
@@ -1184,6 +1213,12 @@ $('#optTab').addEventListener('change', e => { settings.tabCompare = e.target.ch
 function needName() {
   const el = $('#whoName'), n = el.value.trim().slice(0, 20);
   if (!n) { if (!$('#setup').hidden) { el.focus(); el.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], 240); } else openSheet('#setup'); toast('Coloque o nome de quem vai cantar.'); return null; }
+  if (settings.duet && $('#optDuet').checked && !$('#duetBox').hidden) {
+    const n2 = $('#whoName2').value.trim().slice(0, 20);
+    if (!n2) { $('#whoName2').focus(); toast('Coloque o nome de quem canta junto.'); return null; }
+    if (!Mic2.an) { toast('O segundo microfone não está ligado. Escolha outro na lista.'); return null; }
+    settings.name2 = n2;
+  }
   settings.name = n; saveSettings(); return n;
 }
 function startSong() {
@@ -1209,6 +1244,7 @@ function startSong() {
     latency: auto ? 0.02 : (settings.latency / 1000 + (c.outputLatency || 0) + (c.baseLatency || 0) + 0.04)
   });
   G.hasMic = !!Mic.an;
+  setupDuet(meta);
   if (G.hasMic && !auto) startCalibration();
   if (!G.hasMic) { G.mode = 'livre'; toast('Sem microfone: você canta, mas a nota fica de fora.'); }
   $('#modeTag').textContent = G.auto ? 'Modo show · voz original' : G.mode === 'pitch' ? 'Afinação · ' + ({ facil: 'fácil', normal: 'normal', dificil: 'difícil' }[settings.diff]) : G.mode === 'ritmo' ? 'Modo ritmo' : 'Sem microfone';
@@ -1273,8 +1309,13 @@ function loop(id) {
   const t = src.time();
   const dt = clamp(t - G.lastT, 0, 0.1); G.lastT = t;
   Beat.update(performance.now() / 1000, dt || 1 / 60);
-  if (G.yt) { if (!G.paused && G.yt.playing()) updateFree(t, dt); drawFree(t); }
-  else { if (!G.paused) update(t, dt); draw(t); }
+  const step = G.yt ? (G.paused || !G.yt.playing() ? null : updateFree) : (G.paused ? null : update);
+  if (step) {
+    if (G.duet && G.P) { for (let i = 0; i < 2 && !G.ended; i++) { loadP(i); step(t, dt); saveP(i); } if (!G.ended) loadP(0); }
+    else step(t, dt);
+  }
+  if (G.yt) drawFree(t); else draw(t);
+  if (G.duet && G.P && !G.ended) duetHud();
 }
 
 function update(t, dt) {
@@ -1283,7 +1324,8 @@ function update(t, dt) {
   // sincroniza voz guia
   if (G.voc && performance.now() - G.lastSync > 1500) { G.lastSync = performance.now(); if (Math.abs(G.voc.el.currentTime - G.inst.el.currentTime) > 0.1) G.voc.el.currentTime = G.inst.el.currentTime; }
   // afinação do cantor (a cada 2 quadros)
-  if (G.hasMic && Mic.an && G.frame % 2 === 0) { const r = Mic.read(); G.lastPitch = Mic.pitch(r); }
+  const M = G.mic || Mic;
+  if (G.hasMic && M.an && G.frame % 2 === 0) { const r = M.read(); G.lastPitch = M.pitch(r); }
   const pm = G.hasMic ? G.lastPitch : null;
   // fecha notas que já passaram
   while (G.noteIdx < G.notes.length && G.notes[G.noteIdx].e < rt) { judgeNote(G.notes[G.noteIdx]); G.noteIdx++; }
@@ -1352,7 +1394,8 @@ function judgeLine(l) {
 
 /* ---------------- Reações ---------------- */
 function showJudge(j) {
-  const el = $('#judge'); const txt = { perfect: 'Perfeito', great: 'Ótimo', good: 'Bom', miss: 'Errou' }[j];
+  const el = $('#judge'); let txt = { perfect: 'Perfeito', great: 'Ótimo', good: 'Bom', miss: 'Errou' }[j];
+  if (G.duet) { txt = G.pname + ': ' + txt; if (G.pi === 1) { el.style.top = '52px'; } else el.style.top = ''; }
   el.textContent = txt; el.className = 'judge' + (j === 'great' || j === 'good' ? ' out' : j === 'miss' ? ' miss' : '');
   el.style.left = (G.playX || 80) + 'px'; void el.offsetWidth; el.classList.add('go');
 }
@@ -1441,12 +1484,14 @@ function drawHighway(rt) {
   }
   // rastro da voz
   x.lineWidth = 3; x.lineCap = 'round'; x.lineJoin = 'round';
-  let prev = null;
-  for (const p of G.trail) {
-    if (p.m == null) { prev = null; continue; }
-    const cx = X(p.t), cy = G.mode === 'ritmo' ? H / 2 : clamp(y(p.m), 4, H - 4);
-    if (prev) { x.strokeStyle = p.ok ? COL.yellow : 'rgba(245,244,240,.45)'; x.beginPath(); x.moveTo(prev[0], prev[1]); x.lineTo(cx, cy); x.stroke(); }
-    prev = [cx, cy];
+  for (const [tr, alt] of duetTrails()) {
+    let prev = null;
+    for (const p of tr) {
+      if (p.m == null) { prev = null; continue; }
+      const cx = X(p.t), cy = G.mode === 'ritmo' ? H / 2 : clamp(y(p.m), 4, H - 4);
+      if (prev) { x.strokeStyle = p.ok ? (alt ? DUET2 : COL.yellow) : 'rgba(245,244,240,.45)'; x.beginPath(); x.moveTo(prev[0], prev[1]); x.lineTo(cx, cy); x.stroke(); }
+      prev = [cx, cy];
+    }
   }
   // agulha
   x.fillStyle = COL.yellow; x.fillRect(px - 1, 0, 2, H);
@@ -1541,6 +1586,7 @@ const VERDICT = [
 ];
 function finish() {
   if (G.ended) return;
+  if (G.duet && G.P) return finishDuet();
   G.ended = true;
   for (let i = G.noteIdx; i < G.notes.length; i++) judgeNote(G.notes[i]);
   G.lines.forEach(l => { if (!l.judged) judgeLine(l); });
@@ -1557,7 +1603,7 @@ function finish() {
   $('#stage').hidden = true; $('#results').hidden = false; $('#results').scrollTop = 0;
   Room.songEnded(nota);
   $('#resSong').textContent = G.meta.title; $('#resWho').textContent = entry.name;
-  $('#resNota').textContent = nota == null ? '—' : nota;
+  $('#resNota').textContent = nota == null ? '—' : nota; $('#resNota').classList.remove('duo');
   const v = VERDICT.find(r => (nota ?? 0) >= r[0]);
   $('#resTitle').textContent = nota == null ? 'Cantou sem nota.' : v[1];
   $('#resLead').textContent = nota == null ? 'O microfone não estava liberado. Libere nas permissões do navegador e cante de novo para receber nota.' : v[2];
@@ -1734,8 +1780,10 @@ async function startYt() {
     phrase: null, silence: 0, voicedTime: 0, offKey: 0, keyChecked: 0, keyHits: 0, hist: [], tuneSum: 0, stabSum: 0, phraseDur: 0, view: 64, cur: null
   });
   G.hasMic = !!Mic.an;
+  setupDuet(null);
   $('#modeTag').textContent = !G.hasMic ? 'Sem microfone' : Tab.an ? 'YouTube · comparando com a música' : 'YouTube · só afinação';
   Tab.reset(); setTheme('pop'); G.info = null;
+  if (G.duet) $('#modeTag').textContent = 'Dueto · ' + G.P[0].pname + ' × ' + G.P[1].pname;
   if (Tab.src) Beat.attach(Tab.src); else Beat.detach();
   if (!G.hasMic) toast('Sem microfone: você canta, mas a nota fica de fora.');
   $$('.sheet').forEach(x => x.hidden = true);
@@ -1751,7 +1799,8 @@ async function startYt() {
 function updateFree(t, dt) {
   G.frame++;
   if (Tab.an && G.frame % 6 === 0) Tab.update();
-  if (G.hasMic && Mic.an && G.frame % 2 === 0) { const r = Mic.read(); G.lastPitch = Mic.pitch(r); }
+  const M = G.mic || Mic;
+  if (G.hasMic && M.an && G.frame % 2 === 0) { const r = M.read(); G.lastPitch = M.pitch(r); }
   const pm = G.hasMic ? G.lastPitch : null;
   if (pm != null) {
     G.voicedTime += dt; G.silence = 0;
@@ -1827,13 +1876,15 @@ function drawFree(t) {
   }
   // rastro: trechos afinados viram barras amarelas
   x.lineCap = 'round'; x.lineJoin = 'round';
-  let prev = null;
-  for (const p of G.trail) {
-    if (p.m == null) { prev = null; continue; }
-    const mm = p.m - 12 * Math.round((p.m - G.view) / 12);
-    const cx = X(p.t), cy = clamp(y(mm), 4, H - 4);
-    if (prev) { x.strokeStyle = p.ok ? COL.yellow : 'rgba(245,244,240,.45)'; x.lineWidth = p.ok ? 8 : 3; x.beginPath(); x.moveTo(prev[0], prev[1]); x.lineTo(cx, cy); x.stroke(); }
-    prev = [cx, cy];
+  for (const [tr, alt] of duetTrails()) {
+    let prev = null;
+    for (const p of tr) {
+      if (p.m == null) { prev = null; continue; }
+      const mm = p.m - 12 * Math.round((p.m - G.view) / 12);
+      const cx = X(p.t), cy = clamp(y(mm), 4, H - 4);
+      if (prev) { x.strokeStyle = p.ok ? (alt ? DUET2 : COL.yellow) : 'rgba(245,244,240,.45)'; x.lineWidth = p.ok ? 8 : 3; x.beginPath(); x.moveTo(prev[0], prev[1]); x.lineTo(cx, cy); x.stroke(); }
+      prev = [cx, cy];
+    }
   }
   x.fillStyle = COL.yellow; x.fillRect(px - 1, 0, 2, H);
   // afinador ao vivo
@@ -1983,9 +2034,119 @@ async function loadAutotune(c, po) {
 
 
 function startCalibration() {
-  Mic.calibrate(3000);
+  Mic.calibrate(3000); if (G.duet && Mic2.an) Mic2.calibrate(3000);
   const b = $('#announce'); b.textContent = 'Silêncio: calibrando'; b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
   toast('Fica 3 segundos em silêncio: estou medindo o som da música no microfone.', 3200);
+}
+
+
+/* =========================================================
+   Dueto: dois microfones no mesmo computador, cada um com sua nota
+   ========================================================= */
+const DUET2 = '#7fd1ff';
+const Mic2 = Object.assign(Object.create(Mic), {
+  an: null, hp: null, node: null, buf: null, stream: null, src: null, external: false, linkedTo: null,
+  rmsHist: [], floor: 0, calUntil: 0, calMic: [], calTab: [], calFloor: 0, leakK: 0, ratioHist: null,
+  async start() {
+    this.stop2();
+    if (settings.mic2 === 'R') { if (!Mic.rightNode) return false; this.attach(Mic.rightNode); }
+    else {
+      if (!settings.mic2) return false;
+      try { this.stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: settings.mic2 }, echoCancellation: !settings.monitor, noiseSuppression: false, autoGainControl: false, channelCount: 1 } }); }
+      catch (e) { return false; }
+      this.src = ac().createMediaStreamSource(this.stream); this.attach(this.src);
+    }
+    this.monitorLink(); return true;
+  },
+  monitorLink() { if (Mic.mon && Mic.mon.pre && this.node && this.linkedTo !== Mic.mon.pre) { try { this.node.connect(Mic.mon.pre); this.linkedTo = Mic.mon.pre; } catch (e) {} } },
+  stop2() {
+    try { this.linkedTo && this.node && this.node.disconnect(this.linkedTo); } catch (e) {}
+    this.linkedTo = null; this.detach();
+    if (this.stream) this.stream.getTracks().forEach(t => t.stop());
+    Object.assign(this, { stream: null, src: null, rmsHist: [], calMic: [], ratioHist: null, floor: 0, calFloor: 0, leakK: 0 });
+  }
+});
+async function refreshDuet() {
+  let devs = [];
+  try { devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput' && d.deviceId && d.deviceId !== 'default' && d.deviceId !== 'communications'); } catch (e) {}
+  const box = $('#duetBox');
+  box.hidden = devs.length < 2;
+  if (box.hidden) { Mic2.stop2(); return; }
+  let cur1 = settings.mic1; try { cur1 = Mic.stream.getAudioTracks()[0].getSettings().deviceId || cur1; } catch (e) {}
+  const opt = (d, i, sel) => `<option value="${esc(d.deviceId)}"${d.deviceId === sel ? ' selected' : ''}>${esc(d.label || 'Microfone ' + (i + 1))}</option>`;
+  $('#mic1Sel').innerHTML = devs.map((d, i) => opt(d, i, cur1)).join('');
+  let m2 = settings.mic2;
+  if (!m2 || (m2 !== 'R' && !devs.some(d => d.deviceId === m2)) || m2 === cur1) { const o = devs.find(d => d.deviceId !== cur1); m2 = o ? o.deviceId : 'R'; }
+  $('#mic2Sel').innerHTML = devs.map((d, i) => opt(d, i, m2)).join('') + `<option value="R"${m2 === 'R' ? ' selected' : ''}>Lado direito do microfone 1 (receptor com 2 microfones)</option>`;
+  settings.mic2 = m2; saveSettings();
+  $('#optDuet').checked = !!settings.duet; $('#duetFields').hidden = !settings.duet; $('#whoName2').value = settings.name2 || '';
+  if (settings.duet && !Mic2.an) { const ok = await Mic2.start(); if (!ok && settings.mic2 === 'R') await restartMics(); }
+}
+async function restartMics() {
+  Mic.stop(); await Mic.start();
+  if (settings.duet) { const ok = await Mic2.start(); if (!ok) toast('Não consegui abrir o segundo microfone. Escolha outro na lista.'); }
+}
+$('#optDuet').addEventListener('change', async e => { settings.duet = e.target.checked; saveSettings(); $('#duetFields').hidden = !settings.duet; if (settings.duet) await restartMics(); else Mic2.stop2(); });
+$('#mic1Sel').addEventListener('change', async e => { settings.mic1 = e.target.value; saveSettings(); await restartMics(); });
+$('#mic2Sel').addEventListener('change', async e => { settings.mic2 = e.target.value; saveSettings(); await restartMics(); });
+$('#whoName2').addEventListener('input', e => { settings.name2 = e.target.value.trim(); saveSettings(); });
+
+const PF = ['score', 'combo', 'maxCombo', 'counts', 'trail', 'lastPitch', 'devSum', 'devN', 'phrase', 'silence', 'voicedTime', 'hist', 'tuneSum', 'stabSum', 'phraseDur', 'cur', 'offKey', 'keyChecked', 'keyHits', 'noteIdx', 'notes', 'lines', 'lastJudgeAt', 'frame', 'mic', 'pname', 'pi'];
+function loadP(i) { Object.assign(G, G.P[i]); }
+function saveP(i) { PF.forEach(k => { G.P[i][k] = G[k]; }); }
+function duetTrails() { return G.duet && G.P ? [[G.P[0].trail, false], [G.P[1].trail, true]] : [[G.trail, false]]; }
+function setupDuet(meta) {
+  G.duet = !!(settings.duet && !$('#duetBox').hidden && Mic2.an && G.hasMic && !G.auto);
+  G.P = null; G.mic = Mic; G.pi = 0; G.pname = settings.name;
+  $('.combo span').textContent = 'Combo';
+  if (!G.duet) return;
+  const base = {}; PF.forEach(k => { base[k] = G[k]; });
+  const p0 = Object.assign({}, base, { mic: Mic, pname: settings.name, pi: 0 });
+  const p1 = Object.assign({}, base, { mic: Mic2, pname: settings.name2 || 'Dupla', pi: 1, counts: { perfect: 0, great: 0, good: 0, miss: 0 }, trail: [], hist: [], lines: [], notes: [], phrase: null, combo: 0, maxCombo: 0, score: 0 });
+  if (!G.free && meta) { const Q = prepareGame(meta); p1.notes = Q.notes; p1.lines = Q.lines; }
+  G.P = [p0, p1];
+  $('#modeTag').textContent = 'Dueto · ' + p0.pname + ' × ' + p1.pname;
+}
+function duetHud() {
+  const [a, b] = G.P;
+  $('#stScore').innerHTML = `${Math.round(a.score / 100)}<span style="color:var(--mute);font-size:.6em"> · </span><span style="color:${DUET2}">${Math.round(b.score / 100)}</span>`;
+  $('#combo').innerHTML = `${a.combo}<span style="color:var(--mute);font-size:.6em"> · </span><span style="color:${DUET2}">${b.combo}</span>`;
+  $('.combo span').textContent = a.pname + ' · ' + b.pname;
+}
+function finishDuet() {
+  G.ended = true; const res = [];
+  for (let i = 0; i < 2; i++) {
+    loadP(i);
+    for (let k = G.noteIdx; k < G.notes.length; k++) judgeNote(G.notes[k]);
+    G.lines.forEach(l => { if (!l.judged) judgeLine(l); });
+    if (G.free) { if (G.phrase) closePhrase(); G.score = freeNota(true) * 100; }
+    saveP(i);
+    res.push({ name: G.pname, nota: Math.round(clamp(G.score / 100, 0, 100)), combo: G.maxCombo });
+  }
+  loadP(0);
+  G.running = false; disposeTracks(); wakeLock(false); Tab.stop(); Beat.detach(); $('#intro').hidden = true;
+  const song = ((G.info && G.info.title) || G.meta.title || 'Música').slice(0, 120), artist = ((G.info && G.info.artist) || G.meta.artist || '').slice(0, 120);
+  let rank = store.get('rank:' + G.id, []); const h = store.get('history', []);
+  res.forEach(r => {
+    Online.save({ name: r.name, song, artist, song_id: String(G.id || '').slice(0, 80), nota: r.nota, mode: G.free ? 'youtube' : 'completo', room: Room.role === 'host' ? Room.code : '', device: myId });
+    r.entry = { name: r.name, nota: r.nota, at: Date.now() }; h.push({ name: r.name, song, artist, id: G.id, nota: r.nota, at: r.entry.at }); rank.push(r.entry);
+  });
+  store.set('history', h.slice(-500)); rank.sort((x, y) => y.nota - x.nota); rank = rank.slice(0, 5); store.set('rank:' + G.id, rank);
+  $('#stage').hidden = true; $('#results').hidden = false; $('#results').scrollTop = 0;
+  const [a, b] = res, avg = Math.round((a.nota + b.nota) / 2);
+  Room.songEnded(avg);
+  $('#resSong').textContent = G.meta.title; $('#resWho').textContent = a.name + ' & ' + b.name;
+  $('#resNota').innerHTML = `${a.nota}<span class="vs">×</span><span style="color:${DUET2}">${b.nota}</span>`; $('#resNota').classList.add('duo');
+  $('#resTitle').textContent = a.nota === b.nota ? 'Empate perfeito!' : (a.nota > b.nota ? a.name : b.name) + ' mandou melhor!';
+  $('#resLead').textContent = `Nota da dupla: ${avg}. ` + VERDICT.find(r => avg >= r[0])[2];
+  const stars = Math.round(avg / 20);
+  $('#resStars').innerHTML = [0, 1, 2, 3, 4].map(i => `<i class="${i < stars ? 'on' : ''}">✱</i>`).join('');
+  const stats = [[a.name, a.nota], [b.name, b.nota], ['Média da dupla', avg], ['Combo de ' + a.name, a.combo], ['Combo de ' + b.name, b.combo], ['Plateia no auge', Math.round(G.maxHype) + '%']];
+  $('#resStats').innerHTML = stats.map(([k, v]) => `<div class="stat"><span>${esc(k)}</span><b>${v}</b></div>`).join('');
+  $('#resRank').innerHTML = rank.map((r, i) => `<li class="${res.some(x => x.entry === r) ? 'me' : ''}"><span>${i + 1}. ${esc(r.name)}</span><span>${r.nota} <small>${new Date(r.at).toLocaleDateString('pt-BR')}</small></span></li>`).join('');
+  $('#resChartNote').textContent = '· linha de ' + a.name;
+  requestAnimationFrame(drawResultChart);
+  SFX.applause(2 + avg / 25, 0.4 + avg / 70); if (avg >= 75) setTimeout(() => SFX.whistle(), 500);
 }
 
 /* ---------------- Retorno do microfone ---------------- */
